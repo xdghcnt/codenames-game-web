@@ -1,0 +1,85 @@
+.player {
+    margin-bottom: 3px;
+}
+
+.player.self {
+    font-weight: bold;
+}
+
+.player.ready {
+    background: #e2f0c4;
+}
+
+.player.current:before {
+    content: "➜ ";
+    line-height: 0;
+}
+
+.player.offline {
+    color: #adadad;
+}
+
+.spectators {
+    display: inline-block;
+    height: 20px;
+    margin: 10px;
+    padding: 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    background: white;
+    user-select: none;
+}
+
+.spectators.started {
+    cursor: default;
+}
+
+.spectators:empty:after {
+    content: "...";
+}
+
+.spectators .player {
+    display: inline-block;
+    margin: 0 4px;
+}
+
+.spectators-section {
+    display: none;
+}
+
+.spectators-section.active {
+    display: block;
+}
+
+.host-controls {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    padding: 6px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    user-select: none;
+    cursor: default;
+    text-align: right;
+}
+
+.host-controls-menu > div > div {
+    padding: 3px 2px;
+    cursor: pointer;
+}
+
+.host-controls-menu > div > div:hover {
+    background: #9ccc65;
+}
+
+.host-controls-menu {
+    display: none;
+}
+
+.host-controls:hover .host-controls-menu {
+    display: block;
+}
+
+.settings-button {
+    float: right;
+}
