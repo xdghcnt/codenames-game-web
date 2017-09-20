@@ -83,3 +83,51 @@
 .settings-button {
     float: right;
 }
+
+.word-red {
+    background: #ffcaca;
+}
+
+.word-blu {
+    background: #caddff;
+}
+
+.word-white {
+    background: #f4f4f4;
+}
+
+.word-black {
+    background: #757575;
+}
+
+.isMaster .word {
+    opacity: 0.5;
+}
+
+.isMaster .word-closed {
+    opacity: 1;
+}
+
+.words {
+    display: flex;
+    flex: 5 1 0;
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+
+.word {
+    flex: 1 0 20%;
+    flex-direction: column;
+    display: flex;
+    min-width: 20%;
+    min-height: 13%;
+    box-sizing: border-box;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-family: 'Roboto Condensed', sans-serif;
+    letter-spacing: 0.5px;
+    font-size: 4vmin;
+    align-self: stretch;
+    padding: 12px;
+}

@@ -2,8 +2,7 @@ const
     path = require('path'),
     fs = require('fs'),
     express = require('express'),
-    socketIo = require("socket.io"),
-    http = require('http');
+    socketIo = require("socket.io");
 
 function makeId() {
     let text = "";
@@ -16,6 +15,7 @@ function makeId() {
 
 function shuffleArray(array) {
     array.sort(() => (Math.random() - 0.5));
+    return array;
 }
 
 class JSONSet extends Set {
@@ -28,6 +28,10 @@ class JSONSet extends Set {
     }
 }
 
+let defaultCodeWords;
+fs.readFile("words.txt", "utf8", function (err, words) {
+    defaultCodeWords = words.split(" ");
+});
 const
     rooms = {},
     keys = {};
@@ -46,6 +50,16 @@ const io = socketIo(server);
 io.on("connection", socket => {
     let room, user,
         update = () => io.to(room.roomId).emit("state", room),
+        leaveTeams = () => {
+            room.red.delete(user);
+            room.blu.delete(user);
+            if (room.redMaster === user)
+                room.redMaster = null;
+            else if (room.bluMaster === user)
+                room.bluMaster = null;
+            socket.leave(room.roomId + "-master");
+            socket.emit("masterKey", null);
+        },
         removePlayer = playerId => {
             delete room.playerNames[playerId];
             room.onlinePlayers.delete(playerId);
@@ -57,6 +71,16 @@ io.on("connection", socket => {
                 if (room.playerNames[userId] === name)
                     playerId = userId;
             });
+        },
+        dealWords = () => {
+            room.words = shuffleArray(defaultCodeWords.slice()).splice(0, 25);
+            room.key = [];
+            keys[room.roomId] = shuffleArray([]
+                .concat(Array.apply(null, new Array(8)).map(() => "red"))
+                .concat(Array.apply(null, new Array(8)).map(() => "blu"))
+                .concat(Array.apply(null, new Array(1)).map(() => (Math.random() >= 0.5 ? "red" : "blu")))
+                .concat(Array.apply(null, new Array(7)).map(() => "white"))
+                .concat(Array.apply(null, new Array(1)).map(() => "black")));
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -67,12 +91,38 @@ io.on("connection", socket => {
             hostId: user,
             spectators: new JSONSet(),
             playerNames: {},
-            onlinePlayers: new JSONSet()
+            onlinePlayers: new JSONSet(),
+            red: new JSONSet(),
+            blu: new JSONSet(),
+            key: [],
+            words: [],
+            redMaster: null,
+            bluMaster: null,
+            teamsLocked: false
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
         room.onlinePlayers.add(user);
         room.playerNames[user] = args.userName;
+        if (room.redMaster === user || room.bluMaster === user) {
+            socket.join(room.roomId + "-master");
+            socket.emit("masterKey", keys[room.roomId]);
+        }
+        update();
+    });
+    socket.on("word-click", (wordIndex) => {
+        if (room.redMaster === user || room.bluMaster === user)
+            room.key[wordIndex] = keys[room.roomId][wordIndex];
+        update();
+    });
+    socket.on("start-game", () => {
+        //room.teamsLocked = true;
+        dealWords();
+        io.to(room.roomId + "-master").emit("masterKey", keys[room.roomId]);
+        update();
+    });
+    socket.on("stop-game", () => {
+        room.teamsLocked = false;
         update();
     });
     socket.on("change-name", value => {
@@ -100,6 +150,17 @@ io.on("connection", socket => {
         const playerId = getPlayerByName(name);
         if (playerId)
             room.hostId = playerId;
+        update();
+    });
+    socket.on("team-join", (color, isMaster) => {
+        leaveTeams();
+        if (!isMaster)
+            room[color].add(user);
+        else if (!room[`${color}Master`]) {
+            room[`${color}Master`] = user;
+            socket.join(room.roomId + "-master");
+            socket.emit("masterKey", keys[room.roomId]);
+        }
         update();
     });
     socket.on("disconnect", () => {

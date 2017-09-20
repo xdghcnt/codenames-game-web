@@ -10,6 +10,61 @@ function makeId() {
     return text;
 }
 
+class Words extends React.Component {
+    render() {
+        const
+            data = this.props.data,
+            handleWordClick = this.props.handleWordClick;
+        return (
+            <div className="words">
+                {data.words.map((word, index) => (
+                    <div data={data} onClick={() => handleWordClick(index)} className={
+                        "word"
+                        + (data.key[index] ? ` word-${data.key[index]}` : " word-closed")
+                        + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
+                    }>
+                        {word}
+                    </div>
+                ))}
+            </div>
+        );
+    }
+}
+
+class Team extends React.Component {
+    render() {
+        const
+            data = this.props.data,
+            color = this.props.color,
+            handleJoinClick = this.props.handleJoinClick,
+            master = data[color + "Master"];
+        return (
+            <div className={`team ${color}`}>
+                <div className="master" onClick={() => handleJoinClick(color, true)}>
+                    {
+                        !!master
+                            ? (<Player key={master} data={data} id={master}/>)
+                            : (<div className="join-placeholder">
+                                Become master
+                            </div>)
+                    }
+                </div>
+                <div className="players-container" onClick={() => handleJoinClick(color)}>
+                    {
+                        data[color].map(
+                            player => (<Player key={player} data={data} id={player}/>)
+                        )
+                    }
+                    {data.teamsLocked ? ("")
+                        : (
+                            <div className="join-placeholder">Join team</div>
+                        )}
+                </div>
+            </div>
+        );
+    }
+}
+
 class Player extends React.Component {
     render() {
         const data = this.props.data,
@@ -63,8 +118,14 @@ class Game extends React.Component {
         this.socket = io();
         this.socket.on("state", state => this.setState(Object.assign({
             userId: this.userId,
-            activeWord: this.state.activeWord
+            masterKey: this.state.masterKey
         }, state)));
+        this.socket.on("masterKey", masterKey => {
+            this.setState(Object.assign({}, this.state, {
+                userId: this.userId,
+                masterKey: masterKey
+            }));
+        });
         this.socket.on("message", text => {
             alert(text);
         });
@@ -85,8 +146,17 @@ class Game extends React.Component {
         };
     }
 
+    handleWordClock(index) {
+        this.socket.emit("word-click", index);
+    }
+
+    handleJoinClock(color, isMaster) {
+        if (!this.state.teamsLocked)
+            this.socket.emit("team-join", color, isMaster);
+    }
+
     handleSpectatorsClick() {
-        if (this.state.phase === 0)
+        if (!this.state.teamsLocked)
             this.socket.emit("spectators-join");
     }
 
@@ -110,7 +180,8 @@ class Game extends React.Component {
         else if (this.state.inited) {
             const
                 data = this.state,
-                isHost = data.hostId === data.userId;
+                isHost = data.hostId === data.userId,
+                isMaster = data.bluMaster === data.userId || data.redMaster === data.userId;
             if (data.timer) {
                 let timeStart = new Date();
                 this.timeOut = setTimeout(() => {
@@ -122,14 +193,29 @@ class Game extends React.Component {
                     <div className={
                         "game-board"
                         + (this.state.inited ? " active" : "")
+                        + (isMaster ? " isMaster" : "")
                     }>
+                        <div className="main-row">
+                            <Team
+                                color="red"
+                                data={data}
+                                handleJoinClick={(color, isMaster) => this.handleJoinClock(color, isMaster)}
+                            />
+                            <Words data={data} handleWordClick={index => this.handleWordClock(index)}/>
+                            <Team
+                                color="blu"
+                                data={data}
+                                handleJoinClick={(color, isMaster) => this.handleJoinClock(color, isMaster)}
+                            />
+                        </div>
                         <div className={
                             "spectators-section"
-                            + ((true) ? " active" : "")
+                            + ((data.spectators.length > 0 || !data.teamsLocked) ? " active" : "")
                         }>
                             Spectators:
                             <br/>
-                            <Spectators data={this.state} handleSpectatorsClick={() => this.handleSpectatorsClick()}/>
+                            <Spectators data={this.state}
+                                        handleSpectatorsClick={() => this.handleSpectatorsClick()}/>
                         </div>
                         <div className="host-controls">
                             <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
@@ -142,6 +228,7 @@ class Game extends React.Component {
                                     </div>
                                 ) : ""}
                                 <div>
+                                    <div className="start-game">Start game</div>
                                     <div className="change-name">Change name</div>
                                 </div>
                             </div>
@@ -155,7 +242,4 @@ class Game extends React.Component {
     }
 }
 
-ReactDOM.render(
-    <Game/>,
-    document.getElementById('root')
-);
+ReactDOM.render(<Game/>, document.getElementById('root'));
