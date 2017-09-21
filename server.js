@@ -53,6 +53,7 @@ io.on("connection", socket => {
         leaveTeams = () => {
             room.red.delete(user);
             room.blu.delete(user);
+            room.spectators.delete(user);
             if (room.redMaster === user)
                 room.redMaster = null;
             else if (room.bluMaster === user)
@@ -81,6 +82,10 @@ io.on("connection", socket => {
                 .concat(Array.apply(null, new Array(1)).map(() => (Math.random() >= 0.5 ? "red" : "blu")))
                 .concat(Array.apply(null, new Array(7)).map(() => "white"))
                 .concat(Array.apply(null, new Array(1)).map(() => "black")));
+        },
+        updateCount = () => {
+            room.redCount = keys[room.roomId].filter(card => card === "red").length - room.key.filter(card => card === "red").length;
+            room.bluCount = keys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -98,6 +103,10 @@ io.on("connection", socket => {
             words: [],
             redMaster: null,
             bluMaster: null,
+            redCommands: [],
+            bluCommands: [],
+            redCount: null,
+            bluCount: null,
             teamsLocked: false
         };
         if (!room.playerNames[user])
@@ -111,14 +120,29 @@ io.on("connection", socket => {
         update();
     });
     socket.on("word-click", (wordIndex) => {
-        if (room.redMaster === user || room.bluMaster === user)
+        if (room.redMaster === user || room.bluMaster === user) {
             room.key[wordIndex] = keys[room.roomId][wordIndex];
+            updateCount();
+            update();
+        }
+        io.to(room.roomId).emit("highlight-word", wordIndex)
+    });
+    socket.on("toggle-lock", () => {
+        room.teamsLocked = !room.teamsLocked;
         update();
     });
     socket.on("start-game", () => {
-        //room.teamsLocked = true;
+        room.teamsLocked = true;
+        room.redCommands = [];
+        room.bluCommands = [];
         dealWords();
+        updateCount();
         io.to(room.roomId + "-master").emit("masterKey", keys[room.roomId]);
+        update();
+    });
+    socket.on("add-command", (color, command) => {
+        if (command)
+            room[`${color}Commands`].push(command);
         update();
     });
     socket.on("stop-game", () => {
@@ -161,6 +185,11 @@ io.on("connection", socket => {
             socket.join(room.roomId + "-master");
             socket.emit("masterKey", keys[room.roomId]);
         }
+        update();
+    });
+    socket.on("spectators-join", () => {
+        leaveTeams();
+        room.spectators.add(user);
         update();
     });
     socket.on("disconnect", () => {

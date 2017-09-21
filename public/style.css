@@ -1,6 +1,3 @@
-.player {
-    margin-bottom: 3px;
-}
 
 .player.self {
     font-weight: bold;
@@ -24,18 +21,13 @@
     height: 20px;
     margin: 10px;
     padding: 10px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     cursor: pointer;
-    background: white;
+    background: rgba(255, 252, 245, 0.58);
     user-select: none;
 }
 
-.spectators.started {
+.teamsLocked .spectators {
     cursor: default;
-}
-
-.spectators:empty:after {
-    content: "...";
 }
 
 .spectators .player {
@@ -45,6 +37,7 @@
 
 .spectators-section {
     display: none;
+    text-align: center;
 }
 
 .spectators-section.active {
@@ -56,8 +49,7 @@
     right: 0;
     bottom: 0;
     padding: 6px;
-    background: white;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    background: rgb(255, 252, 245);
     user-select: none;
     cursor: default;
     text-align: right;
@@ -69,7 +61,7 @@
 }
 
 .host-controls-menu > div > div:hover {
-    background: #9ccc65;
+    background: #f4e2e0;
 }
 
 .host-controls-menu {
@@ -84,28 +76,51 @@
     float: right;
 }
 
-.word-red {
-    background: #ffcaca;
+.word-red .word-box {
+    background: #ff6450;
+    color: #8a1000;
+    box-shadow: 0 0 0 20px rgba(255, 100, 80, 0);
 }
 
-.word-blu {
-    background: #caddff;
+.word-red .word-box.highlight-anim {
+    box-shadow: 0 0 0 0 #ff6450;
 }
 
-.word-white {
-    background: #f4f4f4;
+.isMaster .word-red.word-guessed .word-box {
+    color: #ec4732;
 }
 
-.word-black {
-    background: #757575;
+.word-blu .word-box {
+    background: #50bbff;
+    color: #00548a;
+    box-shadow: 0 0 0 20px rgba(80, 187, 255, 0);
 }
 
-.isMaster .word {
-    opacity: 0.5;
+.word-blu .word-box.highlight-anim {
+    box-shadow: 0 0 0 0 #50bbff;
 }
 
-.isMaster .word-closed {
-    opacity: 1;
+.isMaster .word-blu.word-guessed .word-box {
+    color: #159ff4;
+}
+
+.word-white .word-box {
+    color: #d8cfad;
+    background: #fffcf5;
+}
+
+.word-black .word-box {
+    background: #444;
+    color: #aaa;
+    box-shadow: 0 0 0 20px rgba(68, 68, 68, 0);
+}
+
+.word-black .word-box.highlight-anim {
+    box-shadow: 0 0 0 0 #444;
+}
+
+.isMaster .word-guessed {
+    opacity: 0.2;
 }
 
 .words {
@@ -113,21 +128,178 @@
     flex: 5 1 0;
     flex-wrap: wrap;
     align-items: stretch;
+    max-width: 910px;
 }
 
 .word {
     flex: 1 0 20%;
-    flex-direction: column;
     display: flex;
     min-width: 20%;
-    min-height: 13%;
+    min-height: 20%;
     box-sizing: border-box;
     text-align: center;
     text-transform: uppercase;
     font-weight: bold;
     font-family: 'Roboto Condensed', sans-serif;
     letter-spacing: 0.5px;
-    font-size: 4vmin;
+    font-size: 3.3vmin;
     align-self: stretch;
     padding: 12px;
+}
+
+.word-box {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    flex: 1 0 100%;
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    cursor: default;
+    background: #fafafa;
+    color: #444;
+    box-shadow: 0 0 0 20px rgba(255, 252, 245, 0);
+    transition: box-shadow 0.5s ease-out;
+}
+
+.word-box.highlight-anim {
+    box-shadow: 0 0 0 0 rgb(255, 252, 245);
+    transition: none;
+}
+
+.isMaster .word-box {
+    cursor: pointer;
+}
+
+.isMaster .word-guessed .word-box {
+    cursor: default;
+}
+
+.word-box span {
+    flex: 1 0 0;
+    user-select: none;
+    line-height: normal;
+}
+
+.main-row {
+    display: flex;
+    justify-content: space-between;
+    height: 100%;
+    max-height: 600px;
+}
+
+.game-board {
+    display: flex;
+    flex-flow: column;
+    justify-content: space-around;
+    height: 100%;
+}
+
+.add-command {
+    font-size: 42px;
+    font-weight: bold;
+    color: #50bbff;
+    cursor: pointer;
+    margin-bottom: -10px;
+}
+
+.commands-title {
+    border-bottom: 1px solid;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+
+.cards-count {
+    position: absolute;
+    font-size: 215px;
+    font-family: 'Roboto Condensed', sans-serif;
+    top: 260px;
+    opacity: 0.2;
+    color: #50bbff;
+    user-select: none;
+}
+
+.team.red {
+    border-left: #ff6450 2px solid;
+    background: rgba(255, 100, 80, 0.08);
+}
+
+.team.red .add-command {
+    color: #ff6450;
+    text-align: right;
+}
+
+.team.red .cards-count {
+    color: #ff6450;
+}
+
+.team.blu {
+    border-right: #50bbff 2px solid;
+    background: rgba(80, 187, 255, 0.1);
+    order: 3;
+}
+
+.team.blu .add-command {
+    color: #50bbff;
+}
+
+.team.blu .cards-count {
+    color: #50bbff;
+}
+
+.team {
+    width: 138px;
+    box-sizing: border-box;
+    padding: 9px;
+    display: flex;
+    flex-flow: column;
+    position: relative;
+}
+
+.master {
+    border-bottom: 1px solid;
+    margin-bottom: 7px;
+    padding-bottom: 6px;
+}
+
+.join-placeholder {
+    border-bottom: 1px dotted;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.player-container {
+    flex-grow: 1;
+}
+
+.player-container > div {
+    margin-bottom: 5px;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(to right, rgb(244, 236, 236) 0%, #e9ecff 100%);
+}
+
+@media (min-width: 768px) and (max-width: 959px) {
+    .word {
+        padding: 6px;
+    }
+
+    .team {
+        width: 81px;
+        padding: 3px;
+    }
+}
+
+@media (max-width: 767px) {
+    .word {
+        padding: 2px;
+    }
+
+    .team {
+        display: none;
+    }
 }
