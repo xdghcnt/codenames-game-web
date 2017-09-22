@@ -215,7 +215,7 @@
     position: absolute;
     font-size: 215px;
     font-family: 'Roboto Condensed', sans-serif;
-    top: 260px;
+    bottom: 14%;
     opacity: 0.2;
     color: #50bbff;
     user-select: none;
@@ -256,12 +256,14 @@
     display: flex;
     flex-flow: column;
     position: relative;
+    overflow: hidden;
 }
 
 .master {
     border-bottom: 1px solid;
     margin-bottom: 7px;
     padding-bottom: 6px;
+    z-index: 1;
 }
 
 .join-placeholder {
@@ -272,6 +274,7 @@
 
 .player-container {
     flex-grow: 1;
+    z-index: 1;
 }
 
 .player-container > div {
@@ -289,7 +292,6 @@ body {
     }
 
     .team {
-        width: 81px;
         padding: 3px;
     }
 }
@@ -300,6 +302,31 @@ body {
     }
 
     .team {
-        display: none;
+        flex-grow: 1;
+        min-height: 200px;
+        order: 0 !important;
+    }
+
+    .words {
+        flex: auto;
+    }
+
+    .game-board {
+        justify-content: flex-start;
+    }
+
+    .main-row {
+        max-height: 520px;
+        flex-flow: wrap;
+    }
+
+    .cards-count {
+        top: -42px;
+        right: 5px;
+    }
+
+    .spectators-section {
+        position: absolute;
+        bottom: 0;
     }
 }
