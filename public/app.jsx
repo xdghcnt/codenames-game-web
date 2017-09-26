@@ -46,7 +46,8 @@ class Team extends React.Component {
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
                     {
                         !!master
-                            ? (<Player key={master} data={data} id={master}/>)
+                            ? (<Player key={master} data={data} id={master}
+                                       handleChangeColor={this.props.handleChangeColor}/>)
                             : !data.teamsLocked ? (
                                 <div className="join-placeholder">Become master</div>) : "Nothing here"
                     }
@@ -54,7 +55,8 @@ class Team extends React.Component {
                 <div className="player-container" onClick={() => handleJoinClick(color)}>
                     {
                         data[color].map(
-                            player => (<Player key={player} data={data} id={player}/>)
+                            player => (<Player key={player} data={data} id={player}
+                                               handleChangeColor={this.props.handleChangeColor}/>)
                         )
                     }
                     {data.teamsLocked || ~data[color].indexOf(data.userId) ? ("")
@@ -87,7 +89,8 @@ class Team extends React.Component {
 
 class Player extends React.Component {
     render() {
-        const data = this.props.data,
+        const
+            data = this.props.data,
             id = this.props.id;
         return (
             <div className={
@@ -95,6 +98,8 @@ class Player extends React.Component {
                 + (!~data.onlinePlayers.indexOf(id) ? " offline" : "")
                 + (id === data.userId ? " self" : "")
             }>
+                <div className="player-color" style={{background: data.playerColors[id]}}
+                     onClick={() => (id === data.userId) && this.props.handleChangeColor()}/>
                 {data.playerNames[id]}
             </div>
         );
@@ -103,7 +108,8 @@ class Player extends React.Component {
 
 class Spectators extends React.Component {
     render() {
-        const data = this.props.data,
+        const
+            data = this.props.data,
             handleSpectatorsClick = this.props.handleSpectatorsClick;
         return (
             <div
@@ -115,7 +121,8 @@ class Spectators extends React.Component {
                 Spectators:
                 {
                     data.spectators.length ? data.spectators.map(
-                        (player, index) => (<Player key={index} data={data} id={player}/>)
+                        (player, index) => (<Player key={index} data={data} id={player}
+                                                    handleChangeColor={this.props.handleChangeColor}/>)
                     ) : " ..."
                 }
             </div>
@@ -190,6 +197,10 @@ class Game extends React.Component {
             this.socket.emit("spectators-join");
     }
 
+    handleChangeColor() {
+        this.socket.emit("change-color");
+    }
+
     handleHostAction(evt) {
         const action = evt.target.className;
         if (action === "start-game" && (!this.state.teamsLocked || confirm("Restart? Are you sure?")))
@@ -235,6 +246,7 @@ class Game extends React.Component {
                                     data={data}
                                     handleJoinClick={(color, isMaster) => this.handleJoinClock(color, isMaster)}
                                     handleAddCommandClick={(color) => this.handleAddCommandClick(color)}
+                                    handleChangeColor={() => this.handleChangeColor()}
                                 />
                             ))}
                             <Words data={data} handleWordClick={index => this.handleWordClock(index)}/>
@@ -244,7 +256,8 @@ class Game extends React.Component {
                             + ((data.spectators.length > 0 || !data.teamsLocked) ? " active" : "")
                         }>
                             <Spectators data={this.state}
-                                        handleSpectatorsClick={() => this.handleSpectatorsClick()}/>
+                                        handleSpectatorsClick={() => this.handleSpectatorsClick()}
+                                        handleChangeColor={() => this.handleChangeColor()}/>
                         </div>
                         <div className="host-controls">
                             <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>

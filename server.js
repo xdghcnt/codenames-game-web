@@ -29,7 +29,7 @@ class JSONSet extends Set {
 }
 
 let defaultCodeWords;
-fs.readFile("words.txt", "utf8", function (err, words) {
+fs.readFile(__dirname + "/words.txt", "utf8", function (err, words) {
     defaultCodeWords = words.split(" ");
 });
 const
@@ -49,6 +49,20 @@ const io = socketIo(server);
 
 io.on("connection", socket => {
     let room, user,
+        colorList = [
+            "#E91E63",
+            "#F44336",
+            "#FF5722",
+            "#FFEB3B",
+            "#8BC34A",
+            "#009688",
+            "#03A9F4",
+            "#3F51B5",
+            "#673AB7",
+            "#e91ec0",
+            "#795548",
+            "#9E9E9E"
+        ],
         update = () => io.to(room.roomId).emit("state", room),
         leaveTeams = () => {
             room.red.delete(user);
@@ -63,6 +77,7 @@ io.on("connection", socket => {
         },
         removePlayer = playerId => {
             delete room.playerNames[playerId];
+            delete room.playerColors[playerId];
             room.onlinePlayers.delete(playerId);
             room.spectators.delete(playerId);
         },
@@ -86,6 +101,19 @@ io.on("connection", socket => {
         updateCount = () => {
             room.redCount = keys[room.roomId].filter(card => card === "red").length - room.key.filter(card => card === "red").length;
             room.bluCount = keys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
+        },
+        getRandomColor = () => {
+            let result;
+            if (Object.keys(room.playerNames).length > colorList)
+                result = "#" + ((1 << 24) * Math.random() | 0).toString(16);
+            else
+                shuffleArray(colorList.slice()).some(color => {
+                    if (!Object.keys(room.playerColors).some(player => room.playerColors[player] === color)) {
+                        result = color;
+                        return true;
+                    }
+                });
+            return result;
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -96,6 +124,7 @@ io.on("connection", socket => {
             hostId: user,
             spectators: new JSONSet(),
             playerNames: {},
+            playerColors: {},
             onlinePlayers: new JSONSet(),
             red: new JSONSet(),
             blu: new JSONSet(),
@@ -113,6 +142,7 @@ io.on("connection", socket => {
             room.spectators.add(user);
         room.onlinePlayers.add(user);
         room.playerNames[user] = args.userName;
+        room.playerColors[user] = room.playerColors[user] || getRandomColor();
         if (room.redMaster === user || room.bluMaster === user) {
             socket.join(room.roomId + "-master");
             socket.emit("masterKey", keys[room.roomId]);
@@ -126,6 +156,10 @@ io.on("connection", socket => {
             update();
         }
         io.to(room.roomId).emit("highlight-word", wordIndex)
+    });
+    socket.on("change-color", () => {
+        room.playerColors[user] = getRandomColor();
+        update();
     });
     socket.on("toggle-lock", () => {
         room.teamsLocked = !room.teamsLocked;
