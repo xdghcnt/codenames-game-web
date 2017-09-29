@@ -51,7 +51,10 @@ class Team extends React.Component {
             color = this.props.color,
             handleJoinClick = this.props.handleJoinClick,
             handleAddCommandClick = this.props.handleAddCommandClick,
-            master = data[color + "Master"];
+            handlePassClick = this.props.handlePassClick,
+            master = data[color + "Master"],
+            userInTeam = ~data[color].indexOf(data.userId),
+            passValue = data.words.length + 1;
         return (
             <div className={`team ${color}`}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
@@ -75,7 +78,12 @@ class Team extends React.Component {
                             <div className="join-placeholder">Join team</div>
                         )}
                 </div>
-                {data[`${color}Commands`].length || data.userId === master ? (
+                {data[`${color}Count`] !== null ? (
+                    <div className="cards-count">
+                        {data[`${color}Count`]}
+                    </div>
+                ) : ""}
+                {data[`${color}Commands`].length || (data.userId === master && userInTeam && data.teamTurn === color)? (
                     <div className="commands-container">
                         <div className="commands-title">Commands</div>
                         {
@@ -85,13 +93,24 @@ class Team extends React.Component {
                         }
                     </div>
                 ) : ""}
-                {data[`${color}Count`] !== null ? (
-                    <div className="cards-count">
-                        {data[`${color}Count`]}
-                    </div>
-                ) : ""}
-                {data.userId === master ? (
+                {data.userId === master && data.teamTurn === color ? (
                     <div className="add-command" onClick={() => handleAddCommandClick(color)}>+</div>
+                ) : ""}
+                {userInTeam && data.teamTurn === color && data.userId !== master ? (
+                    <div className="pass-button" onClick={() => handlePassClick(passValue)}>
+                        <div className="pass-button-title">End turn</div>
+                        <div className="player-tokens">
+                            {data.playerTokens[passValue] && data.playerTokens[passValue].filter(player => player).map(
+                                player => (
+                                    <div className="player-token" style={{background: data.playerColors[player]}}/>)
+                            )}
+                        </div>
+                        <div className={
+                            "token-countdown"
+                            + ((data.tokenCountdown === passValue && data.teamTurn === color) ? " active" : "")
+                            + " " + (data.teamTurn)
+                        }/>
+                    </div>
                 ) : ""}
             </div>
         );
@@ -176,8 +195,10 @@ class Game extends React.Component {
         });
         this.socket.on("highlight-word", (wordIndex) => {
             const node = document.querySelector(`[data-wordIndex='${wordIndex}']`);
-            node.classList.add("highlight-anim");
-            setTimeout(() => node.classList.remove("highlight-anim"), 0);
+            if (node) {
+                node.classList.add("highlight-anim");
+                setTimeout(() => node.classList.remove("highlight-anim"), 0);
+            }
         });
         document.title = `Codenames - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
@@ -190,11 +211,11 @@ class Game extends React.Component {
         };
     }
 
-    handleWordClock(index) {
+    handleWordClick(index) {
         this.socket.emit("word-click", index);
     }
 
-    handleJoinClock(color, isMaster) {
+    handleJoinClick(color, isMaster) {
         if (!this.state.teamsLocked)
             this.socket.emit("team-join", color, isMaster);
     }
@@ -243,7 +264,10 @@ class Game extends React.Component {
                 }, 100);
             }
             return (
-                <div className="game">
+                <div className={
+                    "game"
+                    + (this.state.teamWin ? ` ${this.state.teamWin}-win` : "")
+                }>
                     <div className={
                         "game-board"
                         + (this.state.inited ? " active" : "")
@@ -255,12 +279,13 @@ class Game extends React.Component {
                                 <Team
                                     color={color}
                                     data={data}
-                                    handleJoinClick={(color, isMaster) => this.handleJoinClock(color, isMaster)}
+                                    handleJoinClick={(color, isMaster) => this.handleJoinClick(color, isMaster)}
                                     handleAddCommandClick={(color) => this.handleAddCommandClick(color)}
                                     handleChangeColor={() => this.handleChangeColor()}
+                                    handlePassClick={(value) => this.handleWordClick(value)}
                                 />
                             ))}
-                            <Words data={data} handleWordClick={index => this.handleWordClock(index)}/>
+                            <Words data={data} handleWordClick={index => this.handleWordClick(index)}/>
                         </div>
                         <div className={
                             "spectators-section"

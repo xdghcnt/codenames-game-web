@@ -204,6 +204,7 @@
     color: #50bbff;
     cursor: pointer;
     margin-bottom: -10px;
+    z-index: 1;
 }
 
 .commands-title {
@@ -325,6 +326,25 @@
 .token-countdown.active {
     width: 100%;
     transition: width 3s;
+}
+
+.pass-button {
+    cursor: pointer;
+    margin-bottom: 4px;
+    margin-top: 11px;
+}
+
+.pass-button-title {
+    border-bottom: 1px dotted;
+    display: inline-block;
+}
+
+.game.red-win {
+    background: linear-gradient(to right, rgb(250, 192, 192) 0%, #e9ecff 100%);
+}
+
+.game.blu-win {
+    background: linear-gradient(to right, rgb(244, 236, 236) 0%, #a8b4ff 100%);
 }
 
 body {

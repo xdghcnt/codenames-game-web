@@ -103,15 +103,25 @@ io.on("connection", socket => {
             room.redCount = keys[room.roomId].filter(card => card === "red").length - room.key.filter(card => card === "red").length;
             room.bluCount = keys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
         },
+        endGame = () => {
+            room.key = keys[room.roomId];
+        },
         tokenChanged = (index) => {
             if ([...room[room.teamTurn]].filter((player => room.onlinePlayers.has(player))).length === (room.playerTokens[index] && room.playerTokens[index].size)) {
                 tokenTimeouts[room.roomId] = setTimeout(() => {
-                    room.key[index] = keys[room.roomId][index];
-                    if (room.key[index] !== room.teamTurn)
+                    const passValue = room.words.length + 1;
+                    if (index === passValue || keys[room.roomId][index] !== room.teamTurn)
                         room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+                    if (index !== passValue) {
+                        room.key[index] = keys[room.roomId][index];
+                        updateCount();
+                        if (room.key[index] === "black" || room.bluCount === 0 || room.redCount === 0) {
+                            room.teamWin = room.teamTurn;
+                            endGame();
+                        }
+                    }
                     room.tokenCountdown = null;
                     room.playerTokens = [];
-                    updateCount();
                     update();
                     io.to(room.roomId).emit("highlight-word", index);
                 }, 3000);
@@ -187,7 +197,8 @@ io.on("connection", socket => {
             tokenChanged(wordIndex);
             update();
         }
-        io.to(room.roomId).emit("highlight-word", wordIndex);
+        if (room.red.has(user) || room.blu.has(user))
+            io.to(room.roomId).emit("highlight-word", wordIndex);
     });
     socket.on("change-color", () => {
         room.playerColors[user] = getRandomColor();
@@ -201,6 +212,7 @@ io.on("connection", socket => {
         room.teamsLocked = true;
         room.redCommands = [];
         room.bluCommands = [];
+        room.teamWin = null;
         dealWords();
         updateCount();
         io.to(room.roomId + "-master").emit("masterKey", keys[room.roomId]);
