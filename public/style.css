@@ -53,6 +53,7 @@
     user-select: none;
     cursor: default;
     text-align: right;
+    z-index: 1;
 }
 
 .host-controls-menu > div > div {
@@ -290,6 +291,42 @@
     margin-left: 4px;
 }
 
+.player-tokens {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    padding: 10px;
+}
+
+.player-token {
+    width: 10px;
+    height: 10px;
+    border-radius: 25px;
+    display: inline-block;
+    margin-left: 3px;
+}
+
+.token-countdown {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 4px;
+}
+
+.token-countdown.red {
+    background: #ff6450;
+}
+
+.token-countdown.blu {
+    background: #50bbff;
+}
+
+.token-countdown.active {
+    width: 100%;
+    transition: width 3s;
+}
+
 body {
     margin: 0;
     background: linear-gradient(to right, rgb(244, 236, 236) 0%, #e9ecff 100%);
@@ -301,7 +338,12 @@ body {
     }
 
     .team {
-        padding: 3px;
+        padding: 5px;
+    }
+
+    .master {
+        margin-bottom: 4px;
+        padding-bottom: 3px;
     }
 }
 

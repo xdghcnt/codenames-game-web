@@ -34,7 +34,8 @@ fs.readFile(__dirname + "/words.txt", "utf8", function (err, words) {
 });
 const
     rooms = {},
-    keys = {};
+    keys = {},
+    tokenTimeouts = {};
 
 // Server part
 const app = express();
@@ -94,13 +95,32 @@ io.on("connection", socket => {
             keys[room.roomId] = shuffleArray([]
                 .concat(Array.apply(null, new Array(8)).map(() => "red"))
                 .concat(Array.apply(null, new Array(8)).map(() => "blu"))
-                .concat(Array.apply(null, new Array(1)).map(() => (Math.random() >= 0.5 ? "red" : "blu")))
+                .concat(Array.apply(null, new Array(1)).map(() => (room.teamTurn = (Math.random() >= 0.5 ? "red" : "blu"))))
                 .concat(Array.apply(null, new Array(7)).map(() => "white"))
                 .concat(Array.apply(null, new Array(1)).map(() => "black")));
         },
         updateCount = () => {
             room.redCount = keys[room.roomId].filter(card => card === "red").length - room.key.filter(card => card === "red").length;
             room.bluCount = keys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
+        },
+        tokenChanged = (index) => {
+            if ([...room[room.teamTurn]].filter((player => room.onlinePlayers.has(player))).length === (room.playerTokens[index] && room.playerTokens[index].size)) {
+                tokenTimeouts[room.roomId] = setTimeout(() => {
+                    room.key[index] = keys[room.roomId][index];
+                    if (room.key[index] !== room.teamTurn)
+                        room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+                    room.tokenCountdown = null;
+                    room.playerTokens = [];
+                    updateCount();
+                    update();
+                    io.to(room.roomId).emit("highlight-word", index);
+                }, 3000);
+                room.tokenCountdown = index;
+            }
+            else {
+                clearTimeout(tokenTimeouts[room.roomId]);
+                room.tokenCountdown = null;
+            }
         },
         getRandomColor = () => {
             let result;
@@ -136,7 +156,11 @@ io.on("connection", socket => {
             bluCommands: [],
             redCount: null,
             bluCount: null,
-            teamsLocked: false
+            teamsLocked: false,
+            teamWin: null,
+            teamTurn: null,
+            playerTokens: [],
+            tokenCountdown: null
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
@@ -150,12 +174,20 @@ io.on("connection", socket => {
         update();
     });
     socket.on("word-click", (wordIndex) => {
-        if (room.redMaster === user || room.bluMaster === user) {
-            room.key[wordIndex] = keys[room.roomId][wordIndex];
-            updateCount();
+        if ((room.red.has(user) && room.teamTurn === "red") || (room.blu.has(user) && room.teamTurn === "blu") && !room.key[wordIndex]) {
+            room.playerTokens[wordIndex] = room.playerTokens[wordIndex] || new JSONSet();
+            [...room.playerTokens].forEach(
+                (players, index) => index !== wordIndex
+                    && players
+                    && players.delete(user)
+                    && tokenChanged(index)
+            );
+            if (!room.playerTokens[wordIndex].delete(user))
+                room.playerTokens[wordIndex].add(user);
+            tokenChanged(wordIndex);
             update();
         }
-        io.to(room.roomId).emit("highlight-word", wordIndex)
+        io.to(room.roomId).emit("highlight-word", wordIndex);
     });
     socket.on("change-color", () => {
         room.playerColors[user] = getRandomColor();

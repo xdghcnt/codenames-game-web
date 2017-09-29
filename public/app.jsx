@@ -25,6 +25,17 @@ class Words extends React.Component {
                     }>
                         <div className="word-box" data-wordIndex={index}>
                             <span>{word}</span>
+                            <div className="player-tokens">
+                                {data.playerTokens[index] && data.playerTokens[index].filter(player => player).map(
+                                    player => (
+                                        <div className="player-token" style={{background: data.playerColors[player]}}/>)
+                                )}
+                            </div>
+                            <div className={
+                                "token-countdown"
+                                + (data.tokenCountdown === index ? " active" : "")
+                                + " " + (data.teamTurn)
+                            }/>
                         </div>
                     </div>
                 ))}
