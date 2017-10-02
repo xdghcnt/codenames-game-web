@@ -1,3 +1,18 @@
+.dark-theme .game-board {
+    background: #202020;
+}
+
+.dark-theme .word-box {
+    background: rgba(250, 250, 250, 0.81);
+}
+
+.dark-theme .host-controls-menu {
+    color: black;
+}
+
+body.dark-theme {
+    color: #cccaca;
+}
 
 .player.self {
     font-weight: bold;
@@ -106,7 +121,7 @@
 }
 
 .word-white .word-box {
-    color: #d8cfad;
+    color: #9a978c;
     background: #fffcf5;
 }
 

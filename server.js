@@ -115,6 +115,7 @@ io.on("connection", socket => {
                     if (index !== passValue) {
                         room.key[index] = keys[room.roomId][index];
                         updateCount();
+                        room.hasCommand = false;
                         if (room.key[index] === "black" || room.bluCount === 0 || room.redCount === 0) {
                             room.teamWin = room.teamTurn;
                             endGame();
@@ -170,7 +171,8 @@ io.on("connection", socket => {
             teamWin: null,
             teamTurn: null,
             playerTokens: [],
-            tokenCountdown: null
+            tokenCountdown: null,
+            hasCommand: false
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
@@ -184,7 +186,7 @@ io.on("connection", socket => {
         update();
     });
     socket.on("word-click", (wordIndex) => {
-        if ((room.red.has(user) && room.teamTurn === "red") || (room.blu.has(user) && room.teamTurn === "blu") && !room.key[wordIndex]) {
+        if (room.hasCommand && ((room.red.has(user) && room.teamTurn === "red") || (room.blu.has(user) && room.teamTurn === "blu")) && !room.key[wordIndex]) {
             room.playerTokens[wordIndex] = room.playerTokens[wordIndex] || new JSONSet();
             [...room.playerTokens].forEach(
                 (players, index) => index !== wordIndex
@@ -219,8 +221,10 @@ io.on("connection", socket => {
         update();
     });
     socket.on("add-command", (color, command) => {
-        if (command)
+        if (command) {
+            room.hasCommand = true;
             room[`${color}Commands`].push(command);
+        }
         update();
     });
     socket.on("stop-game", () => {

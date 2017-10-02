@@ -83,7 +83,7 @@ class Team extends React.Component {
                         {data[`${color}Count`]}
                     </div>
                 ) : ""}
-                {data[`${color}Commands`].length || (data.userId === master && userInTeam && data.teamTurn === color)? (
+                {data[`${color}Commands`].length || (data.userId === master && userInTeam && data.teamTurn === color) ? (
                     <div className="commands-container">
                         <div className="commands-title">Commands</div>
                         {
@@ -93,7 +93,7 @@ class Team extends React.Component {
                         }
                     </div>
                 ) : ""}
-                {data.userId === master && data.teamTurn === color ? (
+                {!data.hasCommand && data.userId === master && data.teamTurn === color ? (
                     <div className="add-command" onClick={() => handleAddCommandClick(color)}>+</div>
                 ) : ""}
                 {userInTeam && data.teamTurn === color && data.userId !== master ? (
@@ -163,6 +163,8 @@ class Spectators extends React.Component {
 class Game extends React.Component {
     componentDidMount() {
         const initArgs = {};
+        if (parseInt(localStorage.darkTheme))
+            document.body.classList.add("dark-theme");
         if (!localStorage.userId) {
             while (!localStorage.userName)
                 localStorage.userName = prompt("Your name");
@@ -244,6 +246,10 @@ class Game extends React.Component {
             this.socket.emit("change-name", name);
             localStorage.userName = name;
         }
+        else if (action === "toggle-theme") {
+            localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
+            document.body.classList.toggle("dark-theme");
+        }
         else if (action !== "start-game")
             this.socket.emit(action);
     }
@@ -310,6 +316,7 @@ class Game extends React.Component {
                                     </div>
                                 ) : ""}
                                 <div>
+                                    <div className="toggle-theme">Toggle theme</div>
                                     <div className="change-name">Change name</div>
                                 </div>
                             </div>
