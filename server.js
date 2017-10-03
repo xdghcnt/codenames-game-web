@@ -41,7 +41,11 @@ const
 const app = express();
 app.use('/', express.static(path.join(__dirname, 'public')));
 
-const server = app.listen(8000);
+app.get('/codenames', function (req, res) {
+   res.sendFile(__dirname + '/public/index.html');
+});
+
+const server = app.listen(1488);
 console.log('Server listening on port 8000');
 
 
@@ -215,6 +219,7 @@ io.on("connection", socket => {
         room.redCommands = [];
         room.bluCommands = [];
         room.teamWin = null;
+        room.hasCommand = false;
         dealWords();
         updateCount();
         io.to(room.roomId + "-master").emit("masterKey", keys[room.roomId]);

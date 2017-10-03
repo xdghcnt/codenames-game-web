@@ -58,6 +58,7 @@ class Team extends React.Component {
         return (
             <div className={`team ${color}`}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
+                    {data.teamTurn === color ? "➜" : ""}
                     {
                         !!master
                             ? (<Player key={master} data={data} id={master}
