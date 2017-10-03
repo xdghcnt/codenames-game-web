@@ -114,12 +114,13 @@ io.on("connection", socket => {
             if ([...room[room.teamTurn]].filter((player => room.onlinePlayers.has(player))).length === (room.playerTokens[index] && room.playerTokens[index].size)) {
                 tokenTimeouts[room.roomId] = setTimeout(() => {
                     const passValue = room.words.length + 1;
-                    if (index === passValue || keys[room.roomId][index] !== room.teamTurn)
+                    if (index === passValue || keys[room.roomId][index] !== room.teamTurn) {
                         room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+                        room.hasCommand = false;
+                    }
                     if (index !== passValue) {
                         room.key[index] = keys[room.roomId][index];
                         updateCount();
-                        room.hasCommand = false;
                         if (room.key[index] === "black" || room.bluCount === 0 || room.redCount === 0) {
                             room.teamWin = room.teamTurn;
                             endGame();
