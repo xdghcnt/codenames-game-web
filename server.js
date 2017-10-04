@@ -42,7 +42,7 @@ const app = express();
 app.use('/', express.static(path.join(__dirname, 'public')));
 
 app.get('/codenames', function (req, res) {
-   res.sendFile(__dirname + '/public/index.html');
+    res.sendFile(__dirname + '/public/index.html');
 });
 
 const server = app.listen(1488);
@@ -85,6 +85,12 @@ io.on("connection", socket => {
             delete room.playerColors[playerId];
             room.onlinePlayers.delete(playerId);
             room.spectators.delete(playerId);
+            room.red.delete(playerId);
+            room.blu.delete(playerId);
+            if (room.bluMaster === playerId)
+                room.bluMaster = null;
+            else if (room.redMaster === playerId)
+                room.redMaster = null;
         },
         getPlayerByName = name => {
             let playerId;
@@ -256,7 +262,19 @@ io.on("connection", socket => {
         update();
     });
     socket.on("shuffle-players", () => {
-
+        let players = [];
+        players = players.concat([...room.red]);
+        players = players.concat([...room.blu]);
+        if (room.redMaster)
+            players.push(room.redMaster);
+        if (room.bluMaster)
+            players.push(room.bluMaster);
+        shuffleArray(players);
+        room.redMaster = players.shift();
+        room.bluMaster = players.shift();
+        room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
+        room.blu = new JSONSet(players);
+        update();
     });
     socket.on("give-host", name => {
         const playerId = getPlayerByName(name);
@@ -288,6 +306,10 @@ io.on("connection", socket => {
             room.spectators.delete(user);
             update();
         }
+    });
+    socket.on("ping", () => {
+        room.onlinePlayers.add(user);
+        update();
     });
     socket.emit("re-init");
 });

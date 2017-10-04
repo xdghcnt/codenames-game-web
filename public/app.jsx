@@ -177,10 +177,14 @@ class Game extends React.Component {
         initArgs.userId = this.userId = localStorage.userId;
         initArgs.userName = localStorage.userName;
         this.socket = io();
-        this.socket.on("state", state => this.setState(Object.assign({
-            userId: this.userId,
-            masterKey: this.state.masterKey
-        }, state)));
+        this.socket.on("state", state => {
+            this.setState(Object.assign({
+                userId: this.userId,
+                masterKey: this.state.masterKey
+            }, state));
+            if (!~state.onlinePlayers.indexOf(this.userId))
+                this.socket.emit("ping");
+        });
         this.socket.on("masterKey", masterKey => {
             this.setState(Object.assign({}, this.state, {
                 userId: this.userId,
