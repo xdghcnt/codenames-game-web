@@ -260,6 +260,9 @@ body.dark-theme {
     border-bottom: 1px solid;
     padding-bottom: 8px;
     margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
 }
 
 .cards-count {
@@ -270,6 +273,7 @@ body.dark-theme {
     opacity: 0.2;
     color: #50bbff;
     user-select: none;
+    z-index: 0;
 }
 
 .team.red {
@@ -410,6 +414,41 @@ body.dark-theme {
 
 .red-win .isMaster .word-guessed, .blu-win .isMaster {
     opacity: 1;
+}
+
+.timer {
+    font-size: 14px;
+    z-index: 1;
+    cursor: default;
+}
+
+.timer-time {
+    visibility: hidden;
+}
+
+.timer:hover .timer-time {
+    visibility: visible;
+}
+
+.timer-button {
+    font-size: 15px;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+}
+
+.move-arrow {
+    display: inline-block;
+    margin-right: 4px;
+}
+
+.move-arrow.has-command {
+    transform: rotate(90deg);
+    display: inline-block;
+    margin-right: 2px;
+}
+
+.master .player {
+    margin-left: -4px;
 }
 
 body {

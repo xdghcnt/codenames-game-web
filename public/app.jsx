@@ -58,7 +58,10 @@ class Team extends React.Component {
         return (
             <div className={`team ${color}`}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
-                    {data.teamTurn === color ? "➜" : ""}
+                    {data.teamTurn === color ? (<span className={
+                        "move-arrow"
+                        + (data.hasCommand ? " has-command" : "")
+                    }>➜</span>) : ""}
                     {
                         !!master
                             ? (<Player key={master} data={data} id={master}
@@ -86,7 +89,14 @@ class Team extends React.Component {
                 ) : ""}
                 {data[`${color}Commands`].length || (data.userId === master && userInTeam && data.teamTurn === color) ? (
                     <div className="commands-container">
-                        <div className="commands-title">Commands</div>
+                        <div className="commands-title">
+                            Log
+                            <div className="timer">
+                                <span
+                                    className="timer-time">{(new Date(data[`${color}Time`] || 0)).toUTCString().match(/(\d\d:\d\d )/)[0].trim()}</span>
+                                <i className="material-icons timer-button">alarm</i>
+                            </div>
+                        </div>
                         {
                             data[`${color}Commands`].map(
                                 command => (<div className="command">{command}</div>)
@@ -97,7 +107,7 @@ class Team extends React.Component {
                 {!data.hasCommand && data.userId === master && data.teamTurn === color ? (
                     <div className="add-command" onClick={() => handleAddCommandClick(color)}>+</div>
                 ) : ""}
-                {userInTeam && data.teamTurn === color && data.userId !== master ? (
+                {userInTeam && data.hasCommand && data.teamTurn === color && data.userId !== master ? (
                     <div className="pass-button" onClick={() => handlePassClick(passValue)}>
                         <div className="pass-button-title">End turn</div>
                         <div className="player-tokens">
@@ -260,7 +270,7 @@ class Game extends React.Component {
     }
 
     render() {
-        clearTimeout(this.timeOut);
+        clearTimeout(this.timerTimeout);
         if (this.state.inited && !this.state.playerNames[this.state.userId])
             return (<div>You were kicked</div>);
         else if (this.state.inited) {
@@ -268,11 +278,11 @@ class Game extends React.Component {
                 data = this.state,
                 isHost = data.hostId === data.userId,
                 isMaster = data.bluMaster === data.userId || data.redMaster === data.userId;
-            if (data.timer) {
+            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0) && !data.teamWin) {
                 let timeStart = new Date();
-                this.timeOut = setTimeout(() => {
-                    this.setState(Object.assign({}, this.state, {timer: data.timer + (new Date() - timeStart)}));
-                }, 100);
+                this.timerTimeout = setTimeout(() => {
+                    this.setState(Object.assign({}, this.state, {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
+                }, 1000);
             }
             return (
                 <div className={

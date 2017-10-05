@@ -53,7 +53,7 @@ console.log('Server listening on port 8000');
 const io = socketIo(server);
 
 io.on("connection", socket => {
-    let room, user,
+    let room, user, timerInterval,
         colorList = [
             "#E91E63",
             "#F44336",
@@ -114,6 +114,10 @@ io.on("connection", socket => {
             room.bluCount = keys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
         },
         endGame = () => {
+            clearInterval(timerInterval);
+            timerInterval = undefined;
+            room.redTime = 0;
+            room.bluTime = 0;
             room.key = keys[room.roomId];
         },
         tokenChanged = (index) => {
@@ -183,7 +187,9 @@ io.on("connection", socket => {
             teamTurn: null,
             playerTokens: [],
             tokenCountdown: null,
-            hasCommand: false
+            hasCommand: false,
+            redTime: 0,
+            bluTime: 0
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
@@ -222,6 +228,7 @@ io.on("connection", socket => {
         update();
     });
     socket.on("start-game", () => {
+        endGame();
         room.teamsLocked = true;
         room.redCommands = [];
         room.bluCommands = [];
@@ -236,6 +243,13 @@ io.on("connection", socket => {
         if (command) {
             room.hasCommand = true;
             room[`${color}Commands`].push(command);
+            if (!timerInterval) {
+                let time = new Date();
+                timerInterval = setInterval(() => {
+                    room[`${room.teamTurn}Time`] += new Date() - time;
+                    time = new Date();
+                }, 100);
+            }
         }
         update();
     });
