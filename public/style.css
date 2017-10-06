@@ -366,6 +366,7 @@ body.dark-theme {
     left: 0;
     width: 0;
     height: 4px;
+    transition-property: none;
 }
 
 .token-countdown.red {
@@ -378,7 +379,7 @@ body.dark-theme {
 
 .token-countdown.active {
     width: 100%;
-    transition: width 3s;
+    transition-property: width;
 }
 
 .isMaster .word-red .token-countdown.red {
@@ -449,6 +450,14 @@ body.dark-theme {
 
 .master .player {
     margin-left: -4px;
+}
+
+.timed .timer-time {
+    visibility: visible;
+}
+
+.timer.critical {
+    color: #ef6767;
 }
 
 body {

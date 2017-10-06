@@ -34,8 +34,8 @@ fs.readFile(__dirname + "/words.txt", "utf8", function (err, words) {
 });
 const
     rooms = {},
-    keys = {},
-    tokenTimeouts = {};
+    intervals = {},
+    masterKeys = {};
 
 // Server part
 const app = express();
@@ -53,7 +53,7 @@ console.log('Server listening on port 8000');
 const io = socketIo(server);
 
 io.on("connection", socket => {
-    let room, user, timerInterval,
+    let room, user,
         colorList = [
             "#E91E63",
             "#F44336",
@@ -70,6 +70,7 @@ io.on("connection", socket => {
         ],
         update = () => io.to(room.roomId).emit("state", room),
         leaveTeams = () => {
+            room.playerTokens = [];
             room.red.delete(user);
             room.blu.delete(user);
             room.spectators.delete(user);
@@ -91,6 +92,7 @@ io.on("connection", socket => {
                 room.bluMaster = null;
             else if (room.redMaster === playerId)
                 room.redMaster = null;
+            room.playerTokens = [];
         },
         getPlayerByName = name => {
             let playerId;
@@ -98,53 +100,131 @@ io.on("connection", socket => {
                 if (room.playerNames[userId] === name)
                     playerId = userId;
             });
+            return playerId;
         },
         dealWords = () => {
             room.words = shuffleArray(defaultCodeWords.slice()).splice(0, 25);
             room.key = [];
-            keys[room.roomId] = shuffleArray([]
+            masterKeys[room.roomId] = shuffleArray([]
                 .concat(Array.apply(null, new Array(8)).map(() => "red"))
                 .concat(Array.apply(null, new Array(8)).map(() => "blu"))
                 .concat(Array.apply(null, new Array(1)).map(() => (room.teamTurn = (Math.random() >= 0.5 ? "red" : "blu"))))
                 .concat(Array.apply(null, new Array(7)).map(() => "white"))
                 .concat(Array.apply(null, new Array(1)).map(() => "black")));
+            room.passIndex = room.words.length + 1;
         },
         updateCount = () => {
-            room.redCount = keys[room.roomId].filter(card => card === "red").length - room.key.filter(card => card === "red").length;
-            room.bluCount = keys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
+            room.redCount = masterKeys[room.roomId].filter(card => card === "red").length - room.key.filter(card => card === "red").length;
+            room.bluCount = masterKeys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
         },
         endGame = () => {
-            clearInterval(timerInterval);
-            timerInterval = undefined;
+            clearInterval(intervals[room.roomId].team);
+            clearInterval(intervals[room.roomId].move);
+            intervals[room.roomId].team = undefined;
             room.redTime = 0;
             room.bluTime = 0;
-            room.key = keys[room.roomId];
+            room.key = masterKeys[room.roomId];
+        },
+        startGame = () => {
+            room.teamsLocked = true;
+            room.redCommands = [];
+            room.bluCommands = [];
+            room.playerTokens = [];
+            room.teamWin = null;
+            room.time = null;
+            room.hasCommand = false;
+            room.masterAdditionalTime = false;
+            clearInterval(intervals[room.roomId].team);
+            clearInterval(intervals[room.roomId].move);
+            clearTimeout(intervals[room.roomId].token);
+            dealWords();
+            updateCount();
+            io.to(room.roomId + "-master").emit("masterKey", masterKeys[room.roomId]);
+        },
+        startMasterTimer = () => {
+            clearInterval(intervals[room.roomId].move);
+            room.masterAdditionalTime = false;
+            room.time = room.masterTime * 1000;
+            let time = new Date();
+            intervals[room.roomId].move = setInterval(() => {
+                room.time -= new Date() - time;
+                time = new Date();
+                if (room.time <= 0) {
+                    room.masterAdditionalTime = true;
+                    startTeamTimer();
+                    update();
+                }
+            }, 100);
+        },
+        addCommand = (color, command) => {
+            room.hasCommand = true;
+            room[`${color}Commands`].push(command);
+            if (room.timed && !room.masterAdditionalTime)
+                startTeamTimer();
+            else if (!room.timed && !intervals[room.roomId].team) {
+                let time = new Date();
+                intervals[room.roomId].team = setInterval(() => {
+                    room[`${room.teamTurn}Time`] += new Date() - time;
+                    time = new Date();
+                }, 100);
+            }
+        },
+        startTeamTimer = () => {
+            clearInterval(intervals[room.roomId].move);
+            room.time = room.teamTime * 1000;
+            let time = new Date();
+            intervals[room.roomId].move = setInterval(() => {
+                room.time -= new Date() - time;
+                time = new Date();
+                if (room.time <= 0) {
+                    clearTimeout(intervals[room.roomId].token);
+                    const votedWords = [];
+                    let usedTokens = 0;
+                    room.playerTokens[room.passIndex] = room.playerTokens[room.passIndex] || new JSONSet();
+                    room.playerTokens.forEach((players, index) => {
+                        const word = {index: index, votes: players.size};
+                        usedTokens += players.size;
+                        if (index === room.passIndex)
+                            word.votes += [...room[room.teamTurn]]
+                                .filter(player => room.onlinePlayers.has(player)).length - usedTokens;
+                        votedWords.push(word);
+                    });
+                    const
+                        sorted = votedWords.reverse().sort((a, b) => b.votes - a.votes),
+                        mostVoted = sorted && sorted[0] && (!sorted[1] || (sorted[0].votes > sorted[1].votes));
+                    chooseWord((mostVoted && sorted[0].index) || room.passIndex);
+                }
+            }, 100);
+        },
+        chooseWord = (index) => {
+            if (index === room.passIndex || masterKeys[room.roomId][index] !== room.teamTurn) {
+                room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+                room.hasCommand = false;
+                if (room.timed)
+                    startMasterTimer();
+            } else room.time += room.addTime * 1000;
+            if (index !== room.passIndex) {
+                room.key[index] = masterKeys[room.roomId][index];
+                updateCount();
+                if (room.key[index] === "black" || room.bluCount === 0 || room.redCount === 0) {
+                    room.teamWin = room.teamTurn;
+                    endGame();
+                }
+            }
+            room.tokenCountdown = null;
+            room.playerTokens = [];
+            update();
+            io.to(room.roomId).emit("highlight-word", index);
         },
         tokenChanged = (index) => {
             if ([...room[room.teamTurn]].filter((player => room.onlinePlayers.has(player))).length === (room.playerTokens[index] && room.playerTokens[index].size)) {
-                tokenTimeouts[room.roomId] = setTimeout(() => {
-                    const passValue = room.words.length + 1;
-                    if (index === passValue || keys[room.roomId][index] !== room.teamTurn) {
-                        room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
-                        room.hasCommand = false;
-                    }
-                    if (index !== passValue) {
-                        room.key[index] = keys[room.roomId][index];
-                        updateCount();
-                        if (room.key[index] === "black" || room.bluCount === 0 || room.redCount === 0) {
-                            room.teamWin = room.teamTurn;
-                            endGame();
-                        }
-                    }
-                    room.tokenCountdown = null;
-                    room.playerTokens = [];
-                    update();
-                    io.to(room.roomId).emit("highlight-word", index);
-                }, 3000);
+                intervals[room.roomId].token = setTimeout(() => {
+                    chooseWord(index);
+                }, room.tokenDelay);
                 room.tokenCountdown = index;
             }
             else {
-                clearTimeout(tokenTimeouts[room.roomId]);
+                clearTimeout(intervals[room.roomId].token);
                 room.tokenCountdown = null;
             }
         },
@@ -164,6 +244,10 @@ io.on("connection", socket => {
     socket.on("init", args => {
         socket.join(args.roomId);
         user = args.userId;
+        if (!rooms[args.roomId]) {
+            masterKeys[args.roomId] = {};
+            intervals[args.roomId] = {};
+        }
         room = rooms[args.roomId] = rooms[args.roomId] || {
             inited: true,
             roomId: args.roomId,
@@ -189,7 +273,15 @@ io.on("connection", socket => {
             tokenCountdown: null,
             hasCommand: false,
             redTime: 0,
-            bluTime: 0
+            bluTime: 0,
+            timed: false,
+            masterTime: 60,
+            teamTime: 60,
+            addTime: 15,
+            tokenDelay: null,
+            time: null,
+            masterAdditionalTime: false,
+            passIndex: null
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
@@ -198,7 +290,7 @@ io.on("connection", socket => {
         room.playerColors[user] = room.playerColors[user] || getRandomColor();
         if (room.redMaster === user || room.bluMaster === user) {
             socket.join(room.roomId + "-master");
-            socket.emit("masterKey", keys[room.roomId]);
+            socket.emit("masterKey", masterKeys[room.roomId]);
         }
         update();
     });
@@ -228,33 +320,43 @@ io.on("connection", socket => {
         update();
     });
     socket.on("start-game", () => {
-        endGame();
-        room.teamsLocked = true;
-        room.redCommands = [];
-        room.bluCommands = [];
-        room.teamWin = null;
-        room.hasCommand = false;
-        dealWords();
-        updateCount();
-        io.to(room.roomId + "-master").emit("masterKey", keys[room.roomId]);
+        room.timed = false;
+        room.tokenDelay = 3000;
+        startGame();
         update();
     });
+    socket.on("start-game-timed", () => {
+        room.timed = true;
+        room.tokenDelay = 1500;
+        startGame();
+        update();
+    });
+    socket.on("set-master-time", (value) => {
+        if (parseInt(value))
+            room.masterTime = parseInt(value);
+    });
+    socket.on("set-team-time", (value) => {
+        if (parseInt(value))
+            room.teamTime = parseInt(value);
+    });
+    socket.on("set-add-time", (value) => {
+        if (parseInt(value))
+            room.addTime = parseInt(value);
+    });
     socket.on("add-command", (color, command) => {
-        if (command) {
-            room.hasCommand = true;
-            room[`${color}Commands`].push(command);
-            if (!timerInterval) {
-                let time = new Date();
-                timerInterval = setInterval(() => {
-                    room[`${room.teamTurn}Time`] += new Date() - time;
-                    time = new Date();
-                }, 100);
-            }
-        }
+        if (command && room.teamTurn === color)
+            addCommand(color, command);
         update();
     });
     socket.on("stop-game", () => {
         room.teamsLocked = false;
+        update();
+    });
+    socket.on("skip-team", () => {
+        room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+        room.hasCommand = false;
+        room.masterAdditionalTime = false;
+        startTeamTimer();
         update();
     });
     socket.on("change-name", value => {
@@ -303,7 +405,7 @@ io.on("connection", socket => {
         else if (!room[`${color}Master`]) {
             room[`${color}Master`] = user;
             socket.join(room.roomId + "-master");
-            socket.emit("masterKey", keys[room.roomId]);
+            socket.emit("masterKey", masterKeys[room.roomId]);
         }
         update();
     });

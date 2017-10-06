@@ -34,8 +34,8 @@ class Words extends React.Component {
                             <div className={
                                 "token-countdown"
                                 + (data.tokenCountdown === index ? " active" : "")
-                                + " " + (data.teamTurn)
-                            }/>
+                                + " " + (data.teamTurn)}
+                                 style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
                         </div>
                     </div>
                 ))}
@@ -54,7 +54,8 @@ class Team extends React.Component {
             handlePassClick = this.props.handlePassClick,
             master = data[color + "Master"],
             userInTeam = ~data[color].indexOf(data.userId),
-            passValue = data.words.length + 1;
+            passValue = data.words.length + 1,
+            time = new Date(data.timed ? ((data.teamTurn === color ? data.time : (data.masterTime * 1000))) : data[`${color}Time`]) || 0;
         return (
             <div className={`team ${color}`}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
@@ -87,13 +88,17 @@ class Team extends React.Component {
                         {data[`${color}Count`]}
                     </div>
                 ) : ""}
-                {data[`${color}Commands`].length || (data.userId === master && userInTeam && data.teamTurn === color) ? (
+                {data[`${color}Commands`].length || (data.timed && data.time !== null) || (data.userId === master && userInTeam && data.teamTurn === color) ? (
                     <div className="commands-container">
                         <div className="commands-title">
                             Log
-                            <div className="timer">
-                                <span
-                                    className="timer-time">{(new Date(data[`${color}Time`] || 0)).toUTCString().match(/(\d\d:\d\d )/)[0].trim()}</span>
+                            <div className={
+                                "timer"
+                                + ((data.timed && (time !== 0 && time < 6000)) ? " critical" : "")
+                            }>
+                                <span className="timer-time">
+                                    {time.toUTCString().match(/(\d\d:\d\d )/)[0].trim()}
+                                </span>
                                 <i className="material-icons timer-button">alarm</i>
                             </div>
                         </div>
@@ -119,8 +124,8 @@ class Team extends React.Component {
                         <div className={
                             "token-countdown"
                             + ((data.tokenCountdown === passValue && data.teamTurn === color) ? " active" : "")
-                            + " " + (data.teamTurn)
-                        }/>
+                            + " " + (data.teamTurn)}
+                             style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
                     </div>
                 ) : ""}
             </div>
@@ -219,6 +224,8 @@ class Game extends React.Component {
         });
         document.title = `Codenames - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
+        this.timerSound = new Audio("timer-beep.mp3");
+        this.timerSound.volume = 0.5;
     }
 
     constructor() {
@@ -252,8 +259,8 @@ class Game extends React.Component {
 
     handleHostAction(evt) {
         const action = evt.target.className;
-        if (action === "start-game" && (!this.state.teamsLocked || confirm("Restart? Are you sure?")))
-            this.socket.emit("start-game");
+        if ((action === "start-game" || action === "start-game-timed") && (!this.state.teamsLocked || confirm("Restart? Are you sure?")))
+            this.socket.emit(action);
         else if (action === "give-host")
             this.socket.emit("give-host", prompt("Nickname"));
         else if (action === "change-name") {
@@ -265,7 +272,10 @@ class Game extends React.Component {
             localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
             document.body.classList.toggle("dark-theme");
         }
-        else if (action !== "start-game")
+        else if (action === "set-master-time" || action === "set-team-time" || action === "set-add-time") {
+            this.socket.emit(action, prompt("Time in seconds"));
+        }
+        else if (action !== "start-game" && action !== "start-game-timed")
             this.socket.emit(action);
     }
 
@@ -281,13 +291,20 @@ class Game extends React.Component {
             if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0) && !data.teamWin) {
                 let timeStart = new Date();
                 this.timerTimeout = setTimeout(() => {
-                    this.setState(Object.assign({}, this.state, {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
-                }, 1000);
+                    let prevTime = this.state.time,
+                        time = prevTime - (new Date - timeStart);
+                    this.setState(Object.assign({}, this.state, this.state.timed
+                        ? {time: time}
+                        : {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
+                    if (this.state.timed && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0))
+                        this.timerSound.play();
+                }, 100);
             }
             return (
                 <div className={
                     "game"
                     + (this.state.teamWin ? ` ${this.state.teamWin}-win` : "")
+                    + (this.state.timed ? " timed" : "")
                 }>
                     <div className={
                         "game-board"
@@ -323,10 +340,15 @@ class Game extends React.Component {
                                         <div className="shuffle-players">Shuffle players</div>
                                         <div className="remove-player">Remove player</div>
                                         <div className="remove-offline">Remove offline</div>
+                                        <div className="skip-team">Skip team</div>
                                         <div className="give-host">Give host</div>
+                                        <div className="set-master-time">Set master time</div>
+                                        <div className="set-team-time">Set team time</div>
+                                        <div className="set-add-time">Set adding time</div>
                                         <div className="toggle-lock">{
                                             data.teamsLocked ? "Unlock teams" : "Lock teams"
                                         }</div>
+                                        <div className="start-game-timed">Start timed game</div>
                                         <div className="start-game">Start new game</div>
                                     </div>
                                 ) : ""}
