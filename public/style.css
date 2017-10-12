@@ -44,6 +44,10 @@
     background: rgba(255, 254, 253, 0.81);
 }
 
+.dark-theme #command-input {
+    color: #cccaca;
+}
+
 body.dark-theme {
     color: #cccaca;
 }
@@ -247,13 +251,29 @@ body.dark-theme {
     height: 100%;
 }
 
-.add-command {
+.add-command-button {
     font-size: 42px;
     font-weight: bold;
     color: #50bbff;
     cursor: pointer;
     margin-bottom: -10px;
     z-index: 1;
+}
+
+.team.red .add-command-button {
+    color: #ff6450;
+}
+
+#command-input {
+    width: 100%;
+    margin-top: 5px;
+    background: transparent;
+    border: 1px solid #50bbff;
+    padding: 3px;
+}
+
+.team.red #command-input {
+    border: 1px solid #ff6450;
 }
 
 .commands-title {

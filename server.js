@@ -112,12 +112,14 @@ io.on("connection", socket => {
                 .concat(Array.apply(null, new Array(7)).map(() => "white"))
                 .concat(Array.apply(null, new Array(1)).map(() => "black")));
             room.passIndex = room.words.length + 1;
+            io.to(room.roomId).emit("masterKeyUpdated");
         },
         updateCount = () => {
             room.redCount = masterKeys[room.roomId].filter(card => card === "red").length - room.key.filter(card => card === "red").length;
             room.bluCount = masterKeys[room.roomId].filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
         },
         endGame = () => {
+            room.teamsLocked = false;
             clearInterval(intervals[room.roomId].team);
             clearInterval(intervals[room.roomId].move);
             intervals[room.roomId].team = undefined;
@@ -126,6 +128,7 @@ io.on("connection", socket => {
             room.key = masterKeys[room.roomId];
         },
         startGame = () => {
+            room.paused = false;
             room.teamsLocked = true;
             room.redCommands = [];
             room.bluCommands = [];
@@ -139,7 +142,6 @@ io.on("connection", socket => {
             clearTimeout(intervals[room.roomId].token);
             dealWords();
             updateCount();
-            io.to(room.roomId + "-master").emit("masterKey", masterKeys[room.roomId]);
         },
         startMasterTimer = () => {
             clearInterval(intervals[room.roomId].move);
@@ -147,12 +149,14 @@ io.on("connection", socket => {
             room.time = room.masterTime * 1000;
             let time = new Date();
             intervals[room.roomId].move = setInterval(() => {
-                room.time -= new Date() - time;
-                time = new Date();
-                if (room.time <= 0) {
-                    room.masterAdditionalTime = true;
-                    startTeamTimer();
-                    update();
+                if (!room.paused) {
+                    room.time -= new Date() - time;
+                    time = new Date();
+                    if (room.time <= 0) {
+                        room.masterAdditionalTime = true;
+                        startTeamTimer();
+                        update();
+                    }
                 }
             }, 100);
         },
@@ -174,25 +178,27 @@ io.on("connection", socket => {
             room.time = room.teamTime * 1000;
             let time = new Date();
             intervals[room.roomId].move = setInterval(() => {
-                room.time -= new Date() - time;
-                time = new Date();
-                if (room.time <= 0) {
-                    clearTimeout(intervals[room.roomId].token);
-                    const votedWords = [];
-                    let usedTokens = 0;
-                    room.playerTokens[room.passIndex] = room.playerTokens[room.passIndex] || new JSONSet();
-                    room.playerTokens.forEach((players, index) => {
-                        const word = {index: index, votes: players.size};
-                        usedTokens += players.size;
-                        if (index === room.passIndex)
-                            word.votes += [...room[room.teamTurn]]
-                                .filter(player => room.onlinePlayers.has(player)).length - usedTokens;
-                        votedWords.push(word);
-                    });
-                    const
-                        sorted = votedWords.reverse().sort((a, b) => b.votes - a.votes),
-                        mostVoted = sorted && sorted[0] && (!sorted[1] || (sorted[0].votes > sorted[1].votes));
-                    chooseWord((mostVoted && sorted[0].index) || room.passIndex);
+                if (!room.paused) {
+                    room.time -= new Date() - time;
+                    time = new Date();
+                    if (room.time <= 0) {
+                        clearTimeout(intervals[room.roomId].token);
+                        const votedWords = [];
+                        let usedTokens = 0;
+                        room.playerTokens[room.passIndex] = room.playerTokens[room.passIndex] || new JSONSet();
+                        room.playerTokens.forEach((players, index) => {
+                            const word = {index: index, votes: players.size};
+                            usedTokens += players.size;
+                            if (index === room.passIndex)
+                                word.votes += [...room[room.teamTurn]]
+                                    .filter(player => room.onlinePlayers.has(player)).length - usedTokens;
+                            votedWords.push(word);
+                        });
+                        const
+                            sorted = votedWords.reverse().sort((a, b) => b.votes - a.votes),
+                            mostVoted = sorted && sorted[0] && (!sorted[1] || (sorted[0].votes > sorted[1].votes));
+                        chooseWord((mostVoted && sorted[0].index) || room.passIndex);
+                    }
                 }
             }, 100);
         },
@@ -281,17 +287,16 @@ io.on("connection", socket => {
             tokenDelay: null,
             time: null,
             masterAdditionalTime: false,
-            passIndex: null
+            passIndex: null,
+            paused: false
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
         room.onlinePlayers.add(user);
         room.playerNames[user] = args.userName;
         room.playerColors[user] = room.playerColors[user] || getRandomColor();
-        if (room.redMaster === user || room.bluMaster === user) {
-            socket.join(room.roomId + "-master");
+        if (room.redMaster === user || room.bluMaster === user)
             socket.emit("masterKey", masterKeys[room.roomId]);
-        }
         update();
     });
     socket.on("word-click", (wordIndex) => {
@@ -310,6 +315,10 @@ io.on("connection", socket => {
         }
         if (room.red.has(user) || room.blu.has(user))
             io.to(room.roomId).emit("highlight-word", wordIndex);
+    });
+    socket.on("request-master-key", () => {
+        if (room.redMaster === user || room.bluMaster === user)
+            socket.emit("masterKey", masterKeys[room.roomId]);
     });
     socket.on("change-color", () => {
         room.playerColors[user] = getRandomColor();
@@ -352,6 +361,10 @@ io.on("connection", socket => {
         room.teamsLocked = false;
         update();
     });
+    socket.on("toggle-pause", () => {
+        room.paused = !room.paused;
+        update();
+    });
     socket.on("skip-team", () => {
         room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
         room.hasCommand = false;
@@ -364,8 +377,7 @@ io.on("connection", socket => {
             room.playerNames[user] = value;
         update();
     });
-    socket.on("remove-player", name => {
-        const playerId = getPlayerByName(name);
+    socket.on("remove-player", playerId => {
         if (playerId)
             removePlayer(playerId);
         update();
@@ -392,8 +404,7 @@ io.on("connection", socket => {
         room.blu = new JSONSet(players);
         update();
     });
-    socket.on("give-host", name => {
-        const playerId = getPlayerByName(name);
+    socket.on("give-host", playerId => {
         if (playerId)
             room.hostId = playerId;
         update();
@@ -404,7 +415,6 @@ io.on("connection", socket => {
             room[color].add(user);
         else if (!room[`${color}Master`]) {
             room[`${color}Master`] = user;
-            socket.join(room.roomId + "-master");
             socket.emit("masterKey", masterKeys[room.roomId]);
         }
         update();

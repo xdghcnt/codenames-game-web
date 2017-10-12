@@ -110,7 +110,11 @@ class Team extends React.Component {
                     </div>
                 ) : ""}
                 {!data.hasCommand && data.userId === master && data.teamTurn === color ? (
-                    <div className="add-command" onClick={() => handleAddCommandClick(color)}>+</div>
+                    <div className="add-command">
+                        <input className="add-command-input" id="command-input"
+                               onKeyDown={(evt) => evt.key === "Enter" && handleAddCommandClick(color)}/>
+                        <div className="add-command-button" onClick={() => handleAddCommandClick(color)}>+</div>
+                    </div>
                 ) : ""}
                 {userInTeam && data.hasCommand && data.teamTurn === color && data.userId !== master ? (
                     <div className="pass-button" onClick={() => handlePassClick(passValue)}>
@@ -206,6 +210,7 @@ class Game extends React.Component {
                 masterKey: masterKey
             }));
         });
+        this.socket.on("masterKeyUpdated", () => this.socket.emit("request-master-key"));
         this.socket.on("message", text => {
             alert(text);
         });
@@ -245,7 +250,9 @@ class Game extends React.Component {
     }
 
     handleAddCommandClick(color) {
-        this.socket.emit("add-command", color, prompt("Command:"));
+        const input = document.getElementById("command-input");
+        if (input && input.value)
+            this.socket.emit("add-command", color, input.value);
     }
 
     handleSpectatorsClick() {
@@ -263,6 +270,8 @@ class Game extends React.Component {
             this.socket.emit(action);
         else if (action === "give-host")
             this.socket.emit("give-host", prompt("Nickname"));
+        else if (action === "remove-player")
+            this.socket.emit("remove-player", prompt("Nickname"));
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -272,9 +281,8 @@ class Game extends React.Component {
             localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
             document.body.classList.toggle("dark-theme");
         }
-        else if (action === "set-master-time" || action === "set-team-time" || action === "set-add-time") {
+        else if (action === "set-master-time" || action === "set-team-time" || action === "set-add-time")
             this.socket.emit(action, prompt("Time in seconds"));
-        }
         else if (action !== "start-game" && action !== "start-game-timed")
             this.socket.emit(action);
     }
@@ -291,13 +299,15 @@ class Game extends React.Component {
             if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0) && !data.teamWin) {
                 let timeStart = new Date();
                 this.timerTimeout = setTimeout(() => {
-                    let prevTime = this.state.time,
-                        time = prevTime - (new Date - timeStart);
-                    this.setState(Object.assign({}, this.state, this.state.timed
-                        ? {time: time}
-                        : {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
-                    if (this.state.timed && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0))
-                        this.timerSound.play();
+                    if (!this.state.paused) {
+                        let prevTime = this.state.time,
+                            time = prevTime - (new Date - timeStart);
+                        this.setState(Object.assign({}, this.state, this.state.timed
+                            ? {time: time}
+                            : {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
+                        if (this.state.timed && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0))
+                            this.timerSound.play();
+                    }
                 }, 100);
             }
             return (
@@ -340,6 +350,9 @@ class Game extends React.Component {
                                         <div className="shuffle-players">Shuffle players</div>
                                         <div className="remove-player">Remove player</div>
                                         <div className="remove-offline">Remove offline</div>
+                                        <div className="toggle-pause">{
+                                            !data.paused ? "Pause timer" : "Unpause timer"
+                                        }</div>
                                         <div className="skip-team">Skip team</div>
                                         <div className="give-host">Give host</div>
                                         <div className="set-master-time">Set master time</div>
