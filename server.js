@@ -32,6 +32,7 @@ let defaultCodeWords;
 fs.readFile(__dirname + "/words.txt", "utf8", function (err, words) {
     defaultCodeWords = words.split(" ");
 });
+const defaultCodePics = Array(278).fill().map((_, idx) => idx + 1);
 const
     rooms = {},
     intervals = {},
@@ -82,8 +83,6 @@ io.on("connection", socket => {
             socket.emit("masterKey", null);
         },
         removePlayer = playerId => {
-            delete room.playerNames[playerId];
-            delete room.playerColors[playerId];
             room.onlinePlayers.delete(playerId);
             room.spectators.delete(playerId);
             room.red.delete(playerId);
@@ -103,7 +102,7 @@ io.on("connection", socket => {
             return playerId;
         },
         dealWords = () => {
-            room.words = shuffleArray(defaultCodeWords.slice()).splice(0, 25);
+            room.words = shuffleArray((room.picturesMode ? defaultCodePics : defaultCodeWords).slice()).splice(0, 25);
             room.key = [];
             masterKeys[room.roomId] = shuffleArray([]
                 .concat(Array.apply(null, new Array(8)).map(() => "red"))
@@ -288,7 +287,8 @@ io.on("connection", socket => {
             time: null,
             masterAdditionalTime: false,
             passIndex: null,
-            paused: false
+            paused: false,
+            picturesMode: false
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
@@ -329,12 +329,21 @@ io.on("connection", socket => {
         update();
     });
     socket.on("start-game", () => {
+        room.picturesMode = false;
         room.timed = false;
         room.tokenDelay = 3000;
         startGame();
         update();
     });
     socket.on("start-game-timed", () => {
+        room.picturesMode = false;
+        room.timed = true;
+        room.tokenDelay = 1500;
+        startGame();
+        update();
+    });
+    socket.on("start-game-pictures", () => {
+        room.picturesMode = true;
         room.timed = true;
         room.tokenDelay = 1500;
         startGame();
@@ -378,8 +387,11 @@ io.on("connection", socket => {
         update();
     });
     socket.on("remove-player", playerId => {
-        if (playerId)
+        if (playerId) {
             removePlayer(playerId);
+            if (room.onlinePlayers.has(playerId))
+                room.spectators.add(playerId);
+        }
         update();
     });
     socket.on("remove-offline", () => {

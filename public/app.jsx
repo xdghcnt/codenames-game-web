@@ -24,7 +24,7 @@ class Words extends React.Component {
                         + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
                     }>
                         <div className="word-box" data-wordIndex={index}>
-                            <span>{word}</span>
+                            <span>{data.picturesMode ? (<img src={`pictures/pic${word}.png`}/>) : word}</span>
                             <div className="player-tokens">
                                 {data.playerTokens[index] && data.playerTokens[index].filter(player => player).map(
                                     player => (
@@ -75,6 +75,8 @@ class Team extends React.Component {
                     {
                         data[color].map(
                             player => (<Player key={player} data={data} id={player}
+                                               handleGiveHost={this.props.handleGiveHost}
+                                               handleRemovePlayer={this.props.handleRemovePlayer}
                                                handleChangeColor={this.props.handleChangeColor}/>)
                         )
                     }
@@ -95,6 +97,7 @@ class Team extends React.Component {
                             <div className={
                                 "timer"
                                 + ((data.timed && (time !== 0 && time < 6000)) ? " critical" : "")
+                                + ((data.timed && data.masterAdditionalTime ? " additional" : ""))
                             }>
                                 <span className="timer-time">
                                     {time.toUTCString().match(/(\d\d:\d\d )/)[0].trim()}
@@ -151,6 +154,20 @@ class Player extends React.Component {
                 <div className="player-color" style={{background: data.playerColors[id]}}
                      onClick={() => (id === data.userId) && this.props.handleChangeColor()}/>
                 {data.playerNames[id]}
+                {(data.hostId === data.userId && data.userId !== id) ? (
+                    <div className="player-host-controls">
+                        <i className="material-icons host-button"
+                           title="Give host"
+                           onClick={(evt) => this.props.handleGiveHost(id, evt)}>
+                            vpn_key
+                        </i>
+                        <i className="material-icons host-button"
+                           title="Remove"
+                           onClick={(evt) => this.props.handleRemovePlayer(id, evt)}>
+                            delete_forever
+                        </i>
+                    </div>
+                ) : ""}
             </div>
         );
     }
@@ -172,7 +189,9 @@ class Spectators extends React.Component {
                 {
                     data.spectators.length ? data.spectators.map(
                         (player, index) => (<Player key={index} data={data} id={player}
-                                                    handleChangeColor={this.props.handleChangeColor}/>)
+                                                    handleChangeColor={this.props.handleChangeColor}
+                                                    handleRemovePlayer={this.props.handleRemovePlayer}
+                                                    handleGiveHost={this.props.handleGiveHost}/>)
                     ) : " ..."
                 }
             </div>
@@ -264,14 +283,24 @@ class Game extends React.Component {
         this.socket.emit("change-color");
     }
 
+    handleRemovePlayer(id, evt) {
+        evt.stopPropagation();
+        if (confirm(`Removing ${this.state.playerNames[id]}?`))
+            this.socket.emit("remove-player", id);
+    }
+
+    handleGiveHost(id, evt) {
+        evt.stopPropagation();
+        if (confirm(`Give host ${this.state.playerNames[id]}?`))
+            this.socket.emit("give-host", id);
+    }
+
     handleHostAction(evt) {
         const action = evt.target.className;
         if ((action === "start-game" || action === "start-game-timed") && (!this.state.teamsLocked || confirm("Restart? Are you sure?")))
             this.socket.emit(action);
         else if (action === "give-host")
             this.socket.emit("give-host", prompt("Nickname"));
-        else if (action === "remove-player")
-            this.socket.emit("remove-player", prompt("Nickname"));
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -290,7 +319,7 @@ class Game extends React.Component {
     render() {
         clearTimeout(this.timerTimeout);
         if (this.state.inited && !this.state.playerNames[this.state.userId])
-            return (<div>You were kicked</div>);
+            return (<div className="kicked">You were kicked</div>);
         else if (this.state.inited) {
             const
                 data = this.state,
@@ -315,6 +344,7 @@ class Game extends React.Component {
                     "game"
                     + (this.state.teamWin ? ` ${this.state.teamWin}-win` : "")
                     + (this.state.timed ? " timed" : "")
+                    + (this.state.picturesMode ? " pictures" : "")
                 }>
                     <div className={
                         "game-board"
@@ -331,6 +361,8 @@ class Game extends React.Component {
                                     handleAddCommandClick={(color) => this.handleAddCommandClick(color)}
                                     handleChangeColor={() => this.handleChangeColor()}
                                     handlePassClick={(value) => this.handleWordClick(value)}
+                                    handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
+                                    handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
                                 />
                             ))}
                             <Words data={data} handleWordClick={index => this.handleWordClick(index)}/>
@@ -341,26 +373,27 @@ class Game extends React.Component {
                         }>
                             <Spectators data={this.state}
                                         handleSpectatorsClick={() => this.handleSpectatorsClick()}
-                                        handleChangeColor={() => this.handleChangeColor()}/>
+                                        handleChangeColor={() => this.handleChangeColor()}
+                                        handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
+                                        handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}/>
                         </div>
                         <div className="host-controls">
                             <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
                                 {isHost ? (
                                     <div>
                                         <div className="shuffle-players">Shuffle players</div>
-                                        <div className="remove-player">Remove player</div>
                                         <div className="remove-offline">Remove offline</div>
                                         <div className="toggle-pause">{
                                             !data.paused ? "Pause timer" : "Unpause timer"
                                         }</div>
                                         <div className="skip-team">Skip team</div>
-                                        <div className="give-host">Give host</div>
                                         <div className="set-master-time">Set master time</div>
                                         <div className="set-team-time">Set team time</div>
                                         <div className="set-add-time">Set adding time</div>
                                         <div className="toggle-lock">{
                                             data.teamsLocked ? "Unlock teams" : "Lock teams"
                                         }</div>
+                                        <div className="start-game-pictures">Start pictures game</div>
                                         <div className="start-game-timed">Start timed game</div>
                                         <div className="start-game">Start new game</div>
                                     </div>

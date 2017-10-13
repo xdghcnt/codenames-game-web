@@ -480,6 +480,45 @@ body.dark-theme {
     color: #ef6767;
 }
 
+.timer.additional {
+    color: #d8a177;
+}
+
+.word-box img {
+    width: 100%;
+    -webkit-user-drag: none;
+}
+
+.game.pictures .main-row {
+    max-height: 771px;
+}
+
+.command {
+    word-break: break-all;
+}
+
+.player-host-controls {
+    margin-left: 5px;
+    display: none;
+}
+
+.player:hover .player-host-controls {
+    display: inline-block;
+}
+
+.player .host-button {
+    font-size: 16px;
+    cursor: pointer;
+    vertical-align: text-top;
+}
+
+.kicked {
+    color: black;
+    text-align: center;
+    padding: 20px;
+    font-size: 18px;
+}
+
 body {
     margin: 0;
     background: linear-gradient(to right, rgb(244, 236, 236) 0%, #e9ecff 100%);
