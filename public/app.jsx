@@ -14,15 +14,19 @@ class Words extends React.Component {
     render() {
         const
             data = this.props.data,
-            handleWordClick = this.props.handleWordClick;
+            handleWordClick = this.props.handleWordClick,
+            handleWordPress = this.props.handleWordPress;
         return (
             <div className="words">
                 {data.words.map((word, index) => (
-                    <div data={data} onClick={() => handleWordClick(index)} className={
-                        "word"
-                        + (data.key[index] ? ` word-guessed word-${data.key[index]}` : "")
-                        + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
-                    }>
+                    <div data={data}
+                         onClick={() => handleWordClick(index)}
+                         onMouseDown={() => handleWordPress(index)}
+                         className={
+                             "word"
+                             + (data.key[index] ? ` word-guessed word-${data.key[index]}` : "")
+                             + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
+                         }>
                         <div className="word-box" data-wordIndex={index}>
                             <span>{data.picturesMode ? (<img src={`pictures/pic${word}.png`}/>) : word}</span>
                             <div className="player-tokens">
@@ -263,6 +267,30 @@ class Game extends React.Component {
         this.socket.emit("word-click", index);
     }
 
+    handleWordPress(index) {
+        if (this.state.picturesMode) {
+            this.wasReleased = false;
+            setTimeout(() => {
+                if (!this.wasReleased) {
+                    const wordNode = document.querySelector(`[data-wordIndex='${index}']`);
+                    wordNode.querySelector("img").src = `picturesBig/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
+                    wordNode.classList.add("zoomed");
+                }
+            }, 250);
+        }
+    }
+
+    handleWordRelease() {
+        if (this.state.picturesMode) {
+            this.wasReleased = true;
+            const wordNode = document.querySelector(".zoomed");
+            if (wordNode) {
+                wordNode.querySelector("img").src = `pictures/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
+                document.querySelector(".zoomed").classList.remove("zoomed");
+            }
+        }
+    }
+
     handleJoinClick(color, isMaster) {
         if (!this.state.teamsLocked)
             this.socket.emit("team-join", color, isMaster);
@@ -344,8 +372,8 @@ class Game extends React.Component {
                     "game"
                     + (this.state.teamWin ? ` ${this.state.teamWin}-win` : "")
                     + (this.state.timed ? " timed" : "")
-                    + (this.state.picturesMode ? " pictures" : "")
-                }>
+                    + (this.state.picturesMode ? " pictures" : "")}
+                     onMouseUp={() => this.handleWordRelease()}>
                     <div className={
                         "game-board"
                         + (this.state.inited ? " active" : "")
@@ -365,7 +393,9 @@ class Game extends React.Component {
                                     handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
                                 />
                             ))}
-                            <Words data={data} handleWordClick={index => this.handleWordClick(index)}/>
+                            <Words data={data}
+                                   handleWordClick={index => this.handleWordClick(index)}
+                                   handleWordPress={index => this.handleWordPress(index)}/>
                         </div>
                         <div className={
                             "spectators-section"

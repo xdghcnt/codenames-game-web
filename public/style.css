@@ -486,7 +486,11 @@ body.dark-theme {
 
 .word-box img {
     width: 100%;
+    user-select: none;
+    -moz-user-select: none;
     -webkit-user-drag: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }
 
 .game.pictures .main-row {
@@ -519,9 +523,39 @@ body.dark-theme {
     font-size: 18px;
 }
 
+.word-box.zoomed span {
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    background: #baa697;
+    margin: 104px;
+    left: 0;
+    right: 0;
+    box-shadow: 0 0 35px 12px black;
+}
+
+.word-box.zoomed span {
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    background: #baa697;
+    margin: 104px;
+    left: 0;
+    right: 0;
+    box-shadow: 0 0 35px 12px black;
+}
+
+.word-box.zoomed img {
+    height: 100%;
+    width: initial;
+}
+
 body {
     margin: 0;
     background: linear-gradient(to right, rgb(244, 236, 236) 0%, #e9ecff 100%);
+    -webkit-user-drag: none;
 }
 
 @media (min-width: 768px) and (max-width: 959px) {
