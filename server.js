@@ -235,7 +235,7 @@ io.on("connection", socket => {
         },
         getRandomColor = () => {
             let result;
-            if (Object.keys(room.playerNames).length > colorList)
+            if (Object.keys(room.playerNames).length > colorList.length)
                 result = "#" + ((1 << 24) * Math.random() | 0).toString(16);
             else
                 shuffleArray(colorList.slice()).some(color => {
@@ -422,10 +422,12 @@ io.on("connection", socket => {
         update();
     });
     socket.on("team-join", (color, isMaster) => {
-        leaveTeams();
-        if (!isMaster)
+        if (!isMaster) {
+            leaveTeams();
             room[color].add(user);
+        }
         else if (!room[`${color}Master`]) {
+            leaveTeams();
             room[`${color}Master`] = user;
             socket.emit("masterKey", masterKeys[room.roomId]);
         }

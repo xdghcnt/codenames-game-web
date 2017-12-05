@@ -476,12 +476,12 @@ body.dark-theme {
     visibility: visible;
 }
 
-.timer.critical {
-    color: #ef6767;
-}
-
 .timer.additional {
     color: #d8a177;
+}
+
+.timer.critical {
+    color: #ef6767;
 }
 
 .word-box img {

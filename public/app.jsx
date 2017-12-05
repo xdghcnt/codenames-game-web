@@ -59,7 +59,9 @@ class Team extends React.Component {
             master = data[color + "Master"],
             userInTeam = ~data[color].indexOf(data.userId),
             passValue = data.words.length + 1,
-            time = new Date(data.timed ? ((data.teamTurn === color ? data.time : (data.masterTime * 1000))) : data[`${color}Time`]) || 0;
+            time = new Date(data.timed ? ((data.teamTurn === color ? data.time : (data.masterTime * 1000))) : data[`${color}Time`]) || 0,
+            timeWarning = time !== 0 && time < 6000,
+            isTeamTurn = data.teamTurn === color;
         return (
             <div className={`team ${color}`}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
@@ -70,6 +72,8 @@ class Team extends React.Component {
                     {
                         !!master
                             ? (<Player key={master} data={data} id={master}
+                                       handleGiveHost={this.props.handleGiveHost}
+                                       handleRemovePlayer={this.props.handleRemovePlayer}
                                        handleChangeColor={this.props.handleChangeColor}/>)
                             : !data.teamsLocked ? (
                                 <div className="join-placeholder">Become master</div>) : "Nothing here"
@@ -100,8 +104,8 @@ class Team extends React.Component {
                             Log
                             <div className={
                                 "timer"
-                                + ((data.timed && (time !== 0 && time < 6000)) ? " critical" : "")
-                                + ((data.timed && data.masterAdditionalTime ? " additional" : ""))
+                                + ((isTeamTurn && data.timed && timeWarning && (data.masterAdditionalTime || data.hasCommand)) ? (" critical") : "")
+                                + ((isTeamTurn && data.timed && !data.hasCommand && (data.masterAdditionalTime || timeWarning) ? " additional" : ""))
                             }>
                                 <span className="timer-time">
                                     {time.toUTCString().match(/(\d\d:\d\d )/)[0].trim()}
@@ -206,7 +210,7 @@ class Spectators extends React.Component {
 class Game extends React.Component {
     componentDidMount() {
         const initArgs = {};
-        if (parseInt(localStorage.darkTheme))
+        if (!parseInt(localStorage.darkTheme))
             document.body.classList.add("dark-theme");
         if (!localStorage.userId) {
             while (!localStorage.userName)
@@ -220,6 +224,8 @@ class Game extends React.Component {
         initArgs.userName = localStorage.userName;
         this.socket = io();
         this.socket.on("state", state => {
+            if (this.state.hasCommand === false && state.hasCommand === true)
+                this.chimeSound.play();
             this.setState(Object.assign({
                 userId: this.userId,
                 masterKey: this.state.masterKey
@@ -246,6 +252,7 @@ class Game extends React.Component {
         this.socket.on("highlight-word", (wordIndex) => {
             const node = document.querySelector(`[data-wordIndex='${wordIndex}']`);
             if (node) {
+                this.tapSound.play();
                 node.classList.add("highlight-anim");
                 setTimeout(() => node.classList.remove("highlight-anim"), 0);
             }
@@ -254,7 +261,11 @@ class Game extends React.Component {
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("timer-beep.mp3");
         this.timerSound.volume = 0.5;
-    }
+        this.tapSound = new Audio("tap.mp3");
+        this.tapSound.volume = 0.3;
+        this.chimeSound = new Audio("chime.mp3");
+        this.chimeSound.volume = 0.25;
+    }z
 
     constructor() {
         super();
