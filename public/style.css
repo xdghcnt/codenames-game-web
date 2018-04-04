@@ -607,3 +607,7 @@ body {
         bottom: 0;
     }
 }
+
+.captcha-solved #captcha-container {
+    display: none;
+}

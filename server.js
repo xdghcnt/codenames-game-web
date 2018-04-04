@@ -2,7 +2,8 @@ const
     path = require('path'),
     fs = require('fs'),
     express = require('express'),
-    socketIo = require("socket.io");
+    socketIo = require("socket.io"),
+    reCAPTCHA = require('recaptcha2');
 
 function makeId() {
     let text = "";
@@ -28,6 +29,11 @@ class JSONSet extends Set {
     }
 }
 
+const recaptcha = new reCAPTCHA({
+    siteKey: "",
+    secretKey: ""
+});
+
 let defaultCodeWords;
 fs.readFile(__dirname + "/words.txt", "utf8", function (err, words) {
     defaultCodeWords = words.split(" ");
@@ -36,7 +42,8 @@ const defaultCodePics = Array(278).fill().map((_, idx) => idx + 1);
 const
     rooms = {},
     intervals = {},
-    masterKeys = {};
+    masterKeys = {},
+    authorizedUsers = {};
 
 // Server part
 const app = express();
@@ -49,12 +56,11 @@ app.get('/codenames', function (req, res) {
 const server = app.listen(1488);
 console.log('Server listening on port 8000');
 
-
 // Socket.IO part
 const io = socketIo(server);
 
 io.on("connection", socket => {
-    let room, user,
+    let room, user, userToken, initArgs,
         colorList = [
             "#E91E63",
             "#F44336",
@@ -68,8 +74,12 @@ io.on("connection", socket => {
             "#e91ec0",
             "#795548",
             "#9E9E9E"
-        ],
-        update = () => io.to(room.roomId).emit("state", room),
+        ];
+    socket.use((packet, next) => {
+      if (packet[0] === "init" || initArgs)
+        return next();
+    });
+    let update = () => io.to(room.roomId).emit("state", room),
         leaveTeams = () => {
             room.playerTokens = [];
             room.red.delete(user);
@@ -92,14 +102,6 @@ io.on("connection", socket => {
             else if (room.redMaster === playerId)
                 room.redMaster = null;
             room.playerTokens = [];
-        },
-        getPlayerByName = name => {
-            let playerId;
-            Object.keys(room.playerNames).forEach(userId => {
-                if (room.playerNames[userId] === name)
-                    playerId = userId;
-            });
-            return playerId;
         },
         dealWords = () => {
             room.words = shuffleArray((room.picturesMode ? defaultCodePics : defaultCodeWords).slice()).splice(0, 25);
@@ -245,59 +247,68 @@ io.on("connection", socket => {
                     }
                 });
             return result;
+        },
+        init = () => {
+            socket.join(initArgs.roomId);
+            user = initArgs.userId;
+            if (!rooms[initArgs.roomId]) {
+                masterKeys[initArgs.roomId] = {};
+                intervals[initArgs.roomId] = {};
+            }
+            room = rooms[initArgs.roomId] = rooms[initArgs.roomId] || {
+                inited: true,
+                roomId: initArgs.roomId,
+                hostId: user,
+                spectators: new JSONSet(),
+                playerNames: {},
+                playerColors: {},
+                onlinePlayers: new JSONSet(),
+                red: new JSONSet(),
+                blu: new JSONSet(),
+                key: [],
+                words: [],
+                redMaster: null,
+                bluMaster: null,
+                redCommands: [],
+                bluCommands: [],
+                redCount: null,
+                bluCount: null,
+                teamsLocked: false,
+                teamWin: null,
+                teamTurn: null,
+                playerTokens: [],
+                tokenCountdown: null,
+                hasCommand: false,
+                redTime: 0,
+                bluTime: 0,
+                timed: false,
+                masterTime: 60,
+                teamTime: 60,
+                addTime: 15,
+                tokenDelay: null,
+                time: null,
+                masterAdditionalTime: false,
+                passIndex: null,
+                paused: false,
+                picturesMode: false,
+                authRequired: false
+            };
+            if (!room.playerNames[user])
+                room.spectators.add(user);
+            room.onlinePlayers.add(user);
+            room.playerNames[user] = initArgs.userName;
+            room.playerColors[user] = room.playerColors[user] || getRandomColor();
+            if (room.redMaster === user || room.bluMaster === user)
+                socket.emit("masterKey", masterKeys[room.roomId]);
+            update();
         };
     socket.on("init", args => {
-        socket.join(args.roomId);
-        user = args.userId;
-        if (!rooms[args.roomId]) {
-            masterKeys[args.roomId] = {};
-            intervals[args.roomId] = {};
-        }
-        room = rooms[args.roomId] = rooms[args.roomId] || {
-            inited: true,
-            roomId: args.roomId,
-            hostId: user,
-            spectators: new JSONSet(),
-            playerNames: {},
-            playerColors: {},
-            onlinePlayers: new JSONSet(),
-            red: new JSONSet(),
-            blu: new JSONSet(),
-            key: [],
-            words: [],
-            redMaster: null,
-            bluMaster: null,
-            redCommands: [],
-            bluCommands: [],
-            redCount: null,
-            bluCount: null,
-            teamsLocked: false,
-            teamWin: null,
-            teamTurn: null,
-            playerTokens: [],
-            tokenCountdown: null,
-            hasCommand: false,
-            redTime: 0,
-            bluTime: 0,
-            timed: false,
-            masterTime: 60,
-            teamTime: 60,
-            addTime: 15,
-            tokenDelay: null,
-            time: null,
-            masterAdditionalTime: false,
-            passIndex: null,
-            paused: false,
-            picturesMode: false
-        };
-        if (!room.playerNames[user])
-            room.spectators.add(user);
-        room.onlinePlayers.add(user);
-        room.playerNames[user] = args.userName;
-        room.playerColors[user] = room.playerColors[user] || getRandomColor();
-        if (room.redMaster === user || room.bluMaster === user)
-            socket.emit("masterKey", masterKeys[room.roomId]);
-        update();
+        userToken = args.userId + args.roomId;
+        initArgs = args;
+        if (!authorizedUsers[userToken])
+            socket.emit("auth-required");
+        else
+            init();
     });
     socket.on("word-click", (wordIndex) => {
         if (room.hasCommand && ((room.red.has(user) && room.teamTurn === "red") || (room.blu.has(user) && room.teamTurn === "blu")) && !room.key[wordIndex]) {
@@ -451,6 +462,14 @@ io.on("connection", socket => {
         room.onlinePlayers.add(user);
         update();
     });
-    socket.emit("re-init");
+    socket.on("auth", (key) => {
+        if (initArgs)
+            recaptcha.validate(key)
+                .then(() => {
+                    authorizedUsers[userToken] = true;
+                    init();
+                })
+                .catch(() => socket.emit("reload"));
+    });
 });
 

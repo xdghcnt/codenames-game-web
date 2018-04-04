@@ -249,6 +249,9 @@ class Game extends React.Component {
             });
             window.location.reload();
         });
+        this.socket.on("reload", () => {
+            window.location.reload();
+        });
         this.socket.on("highlight-word", (wordIndex) => {
             const node = document.querySelector(`[data-wordIndex='${wordIndex}']`);
             if (node) {
@@ -256,6 +259,19 @@ class Game extends React.Component {
                 node.classList.add("highlight-anim");
                 setTimeout(() => node.classList.remove("highlight-anim"), 0);
             }
+        });
+        this.socket.on("auth-required", () => {
+            this.setState(Object.assign({}, this.state, {
+                userId: this.userId,
+                authRequired: true
+            }));
+            if (grecaptcha)
+                grecaptcha.render("captcha-container", {
+                    sitekey: "",
+                    callback: (key) => this.socket.emit("auth", key)
+                });
+            else
+                setTimeout(() => window.location.reload(), 3000)
         });
         document.title = `Codenames - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
@@ -265,7 +281,7 @@ class Game extends React.Component {
         this.tapSound.volume = 0.3;
         this.chimeSound = new Audio("chime.mp3");
         this.chimeSound.volume = 0.25;
-    }z
+    }
 
     constructor() {
         super();
@@ -357,9 +373,10 @@ class Game extends React.Component {
 
     render() {
         clearTimeout(this.timerTimeout);
-        if (this.state.inited && !this.state.playerNames[this.state.userId])
+        if (!this.state.authRequired && this.state.inited && !this.state.playerNames[this.state.userId])
             return (<div className="kicked">You were kicked</div>);
         else if (this.state.inited) {
+            document.body.classList.add("captcha-solved");
             const
                 data = this.state,
                 isHost = data.hostId === data.userId,
