@@ -3,7 +3,8 @@ const
     fs = require('fs'),
     express = require('express'),
     socketIo = require("socket.io"),
-    reCAPTCHA = require('recaptcha2');
+    reCAPTCHA = require('recaptcha2'),
+    logging = false;
 
 function makeId() {
     let text = "";
@@ -43,7 +44,8 @@ const
     rooms = {},
     intervals = {},
     masterKeys = {},
-    authorizedUsers = {};
+    authorizedUsers = {},
+    attemptIPs = {};
 
 // Server part
 const app = express();
@@ -76,8 +78,12 @@ io.on("connection", socket => {
             "#9E9E9E"
         ];
     socket.use((packet, next) => {
-      if (packet[0] === "init" || initArgs)
-        return next();
+        if (packet[0] === "init" || packet[0] === "auth" || room) {
+            if (logging)
+                fs.appendFile(__dirname + "/logs.txt", `${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)} \n`, () => {
+            });
+            return next();
+        }
     });
     let update = () => io.to(room.roomId).emit("state", room),
         leaveTeams = () => {
@@ -236,17 +242,7 @@ io.on("connection", socket => {
             }
         },
         getRandomColor = () => {
-            let result;
-            if (Object.keys(room.playerNames).length > colorList.length)
-                result = "#" + ((1 << 24) * Math.random() | 0).toString(16);
-            else
-                shuffleArray(colorList.slice()).some(color => {
-                    if (!Object.keys(room.playerColors).some(player => room.playerColors[player] === color)) {
-                        result = color;
-                        return true;
-                    }
-                });
-            return result;
+            return "#" + ((1 << 24) * Math.random() | 0).toString(16);
         },
         init = () => {
             socket.join(initArgs.roomId);
@@ -463,13 +459,20 @@ io.on("connection", socket => {
         update();
     });
     socket.on("auth", (key) => {
-        if (initArgs)
+        if (initArgs && !room && !attemptIPs[socket.handshake.address]) {
+            attemptIPs[socket.handshake.address] = true;
             recaptcha.validate(key)
                 .then(() => {
-                    authorizedUsers[userToken] = true;
+                    authorizedUsers[initArgs.userId + initArgs.roomId] = true;
                     init();
                 })
-                .catch(() => socket.emit("reload"));
+                .catch(() => socket.emit("reload"))
+                .then(() => {
+                    setTimeout(() => {
+                        delete attemptIPs[socket.handshake.address];
+                    }, 5000)
+                })
+        }
     });
 });
 
