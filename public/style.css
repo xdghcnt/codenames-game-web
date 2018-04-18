@@ -15,19 +15,11 @@
 }
 
 .dark-theme .spectators {
-    background: rgba(255, 252, 245, 0.14);
-}
-
-.dark-theme .host-controls-menu > div > div:hover {
-    background: #313131;
+    background: rgba(63, 63, 62, 0.78);
 }
 
 .dark-theme .host-controls {
-    background: rgba(255, 252, 245, 0.14);
-}
-
-.dark-theme .host-controls:hover {
-    background: rgba(32, 32, 32, 0.62);
+    background: rgba(63, 63, 62, 0.78);
 }
 
 .dark-theme .word-box {
@@ -72,7 +64,6 @@ body.dark-theme {
 .spectators {
     display: inline-block;
     height: 20px;
-    margin: 10px;
     padding: 10px;
     cursor: pointer;
     background: rgba(255, 252, 245, 0.58);
@@ -91,6 +82,9 @@ body.dark-theme {
 .spectators-section {
     display: none;
     text-align: center;
+    position: fixed;
+    left: 0;
+    bottom: 0;
 }
 
 .spectators-section.active {
@@ -107,27 +101,6 @@ body.dark-theme {
     cursor: default;
     text-align: right;
     z-index: 1;
-}
-
-.host-controls-menu > div > div {
-    padding: 3px 2px;
-    cursor: pointer;
-}
-
-.host-controls-menu > div > div:hover {
-    background: #f4e2e0;
-}
-
-.host-controls-menu {
-    display: none;
-}
-
-.host-controls:hover .host-controls-menu {
-    display: block;
-}
-
-.settings-button {
-    float: right;
 }
 
 .word-red .word-box {
@@ -196,7 +169,7 @@ body.dark-theme {
     font-weight: bold;
     font-family: 'Roboto Condensed', sans-serif;
     letter-spacing: 0.5px;
-    font-size: 3.3vmin;
+    font-size: 2.7vmin;
     align-self: stretch;
     padding: 12px;
 }
@@ -477,10 +450,18 @@ body.dark-theme {
 }
 
 .timer.additional {
-    color: #d8a177;
+    color: #ff7800;
 }
 
 .timer.critical {
+    color: #ff0000;
+}
+
+.dark-theme .timer.additional {
+    color: #d8a177;
+}
+
+.dark-theme .timer.critical {
     color: #ef6767;
 }
 
@@ -506,11 +487,11 @@ body.dark-theme {
     display: none;
 }
 
-.player:hover .player-host-controls {
+.player:hover .player-host-controls, .command:hover .player-host-controls {
     display: inline-block;
 }
 
-.player .host-button {
+.player .host-button, .command .host-button {
     font-size: 16px;
     cursor: pointer;
     vertical-align: text-top;
@@ -601,13 +582,153 @@ body {
         top: -42px;
         right: 5px;
     }
-
-    .spectators-section {
-        position: absolute;
-        bottom: 0;
-    }
 }
 
 .captcha-solved #captcha-container {
     display: none;
+}
+
+.little-controls input {
+    width: 39px;
+    background: transparent;
+    border: 1px solid;
+    color: #cccaca;
+    padding: 2px;
+    margin: 3px;
+}
+
+.start-game-buttons div {
+    display: inline-block;
+    padding: 17px;
+}
+
+.little-controls div {
+    display: inline-block;
+}
+
+.settings-button {
+    cursor: pointer;
+}
+
+.settings-button:hover {
+    background: #f4e2e0;
+}
+
+.dark-theme .settings-button:hover {
+    background: #4e4e4e;
+}
+
+.level-selected {
+    background: #f9e7e5;
+}
+
+.dark-theme .level-selected {
+    background: #484848;
+}
+
+.little-controls input {
+    color: black;
+}
+
+.dark-theme .little-controls input {
+    color: #cccaca;
+}
+
+.start-game-buttons i, .custom-game-button i {
+    vertical-align: bottom;
+    margin-right: 3px;
+}
+
+.little-controls i {
+    vertical-align: middle;
+    margin-right: 2px;
+}
+
+.side-buttons {
+    display: none;
+}
+
+.host-controls:hover .side-buttons {
+    display: inline-block;
+}
+
+.start-game-title {
+    text-align: center;
+    padding: 7px;
+    border-top: 1px solid;
+    margin-top: 4px;
+    padding-bottom: 3px;
+}
+
+.custom-game-button {
+    text-align: left;
+    padding-bottom: 4px;
+    padding-left: 13px;
+    width: 91px;
+    margin-bottom: -14px;
+}
+
+.little-controls {
+    text-align: left;
+    border-bottom: 1px solid;
+    padding-bottom: 6px;
+    height: 25px;
+}
+
+.shuffle-players {
+    float: right;
+    margin-top: 2px;
+    padding-left: 5px;
+}
+
+.side-buttons * {
+    margin-right: 2px;
+}
+
+.game-settings .value {
+    vertical-align: middle;
+    padding: 4.5px 0;
+    padding-right: 27px;
+    display: inline-block;
+}
+
+.change-score {
+    margin-top: -2px;
+    margin-right: 3px;
+    display: none;
+}
+
+.change-score {
+    margin-top: -2px;
+    margin-left: 3px;
+    display: none;
+}
+
+.score:hover .change-score {
+    display: inline-block;
+}
+
+.host-controls-menu {
+    display: none;
+    margin-bottom: 9px;
+}
+
+.host-controls:hover .host-controls-menu {
+    display: block;
+}
+
+.start-game-buttons {
+    color: gray;
+}
+
+.start-game-buttons .settings-button {
+    color: black;
+}
+
+.dark-theme .start-game-buttons {
+    color: #909090;
+}
+
+.dark-theme .start-game-buttons .settings-button {
+    color: #cccaca;
 }

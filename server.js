@@ -70,7 +70,7 @@ io.on("connection", socket => {
         if (packet[0] === "init" || packet[0] === "auth" || room) {
             if (logging)
                 fs.appendFile(__dirname + "/logs.txt", `${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)} \n`, () => {
-            });
+                });
             return next();
         }
     });
@@ -163,7 +163,7 @@ io.on("connection", socket => {
                         startTeamTimer();
                         update();
                     }
-                }
+                } else time = new Date();
             }, 100);
         },
         addCommand = (color, command) => {
@@ -205,7 +205,7 @@ io.on("connection", socket => {
                             mostVoted = sorted && sorted[0] && (!sorted[1] || (sorted[0].votes > sorted[1].votes));
                         chooseWord((mostVoted && sorted[0].index) || room.passIndex);
                     }
-                }
+                } else time = new Date();
             }, 100);
         },
         chooseWord = (index) => {
@@ -276,7 +276,7 @@ io.on("connection", socket => {
                 hasCommand: false,
                 redTime: 0,
                 bluTime: 0,
-                timed: false,
+                timed: true,
                 masterTime: 60,
                 teamTime: 60,
                 addTime: 15,
@@ -333,61 +333,83 @@ io.on("connection", socket => {
         update();
     });
     socket.on("toggle-lock", () => {
-        room.teamsLocked = !room.teamsLocked;
+        if (user === room.hostId)
+            room.teamsLocked = !room.teamsLocked;
         update();
     });
     socket.on("start-game", () => {
-        room.picturesMode = false;
-        room.timed = false;
-        room.tokenDelay = 3000;
-        startGame();
-        update();
+        if (user === room.hostId) {
+            room.picturesMode = false;
+            room.timed = false;
+            room.tokenDelay = 3000;
+            startGame();
+            update();
+        }
     });
     socket.on("start-game-timed", () => {
-        room.picturesMode = false;
-        room.timed = true;
-        room.tokenDelay = 1500;
-        startGame();
-        update();
+        if (user === room.hostId) {
+            room.picturesMode = false;
+            room.timed = true;
+            room.tokenDelay = 1500;
+            startGame();
+            update();
+        }
     });
     socket.on("start-game-pictures", () => {
-        room.picturesMode = true;
-        room.timed = true;
-        room.tokenDelay = 1500;
-        startGame();
-        update();
+        if (user === room.hostId) {
+            room.picturesMode = true;
+            room.timed = true;
+            room.tokenDelay = 1500;
+            startGame();
+            update();
+        }
     });
     socket.on("set-master-time", (value) => {
-        if (parseInt(value))
+        if (user === room.hostId && parseInt(value))
             room.masterTime = parseInt(value);
+        update();
     });
     socket.on("set-team-time", (value) => {
-        if (parseInt(value))
+        if (user === room.hostId && parseInt(value))
             room.teamTime = parseInt(value);
+        update();
     });
     socket.on("set-add-time", (value) => {
-        if (parseInt(value))
+        if (user === room.hostId && parseInt(value))
             room.addTime = parseInt(value);
+        update();
     });
     socket.on("add-command", (color, command) => {
         if (command && room.teamTurn === color)
             addCommand(color, command);
         update();
     });
+    socket.on("edit-command", (command, index, color) => {
+        if (user === room.hostId && room[`${color}Commands`] && room[`${color}Commands`][index])
+            room[`${color}Commands`][index] = command;
+        update();
+    });
     socket.on("stop-game", () => {
-        room.teamsLocked = false;
+        if (user === room.hostId)
+            room.teamsLocked = false;
         update();
     });
     socket.on("toggle-pause", () => {
-        room.paused = !room.paused;
+        if (user === room.hostId) {
+            room.paused = !room.paused;
+            if (room.words.length === 0 || room.teamWin !== null)
+                startGame();
+        }
         update();
     });
     socket.on("skip-team", () => {
-        room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
-        room.hasCommand = false;
-        room.masterAdditionalTime = false;
-        startTeamTimer();
-        update();
+        if (user === room.hostId) {
+            room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+            room.hasCommand = false;
+            room.masterAdditionalTime = false;
+            startTeamTimer();
+            update();
+        }
     });
     socket.on("change-name", value => {
         if (value)
@@ -395,7 +417,7 @@ io.on("connection", socket => {
         update();
     });
     socket.on("remove-player", playerId => {
-        if (playerId) {
+        if (playerId && user === room.hostId) {
             removePlayer(playerId);
             if (room.onlinePlayers.has(playerId))
                 room.spectators.add(playerId);
@@ -403,30 +425,33 @@ io.on("connection", socket => {
         update();
     });
     socket.on("remove-offline", () => {
-        Object.keys(room.playerNames).forEach(playerId => {
-            if (!room.onlinePlayers.has(playerId))
-                removePlayer(playerId);
-        });
+        if (user === room.hostId)
+            Object.keys(room.playerNames).forEach(playerId => {
+                if (!room.onlinePlayers.has(playerId))
+                    removePlayer(playerId);
+            });
         update();
     });
     socket.on("shuffle-players", () => {
-        let players = [];
-        players = players.concat([...room.red]);
-        players = players.concat([...room.blu]);
-        if (room.redMaster)
-            players.push(room.redMaster);
-        if (room.bluMaster)
-            players.push(room.bluMaster);
-        shuffleArray(players);
-        room.redMaster = players.shift();
-        room.bluMaster = players.shift();
-        room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
-        room.blu = new JSONSet(players);
-        update();
-        io.to(room.roomId).emit("masterKeyUpdated");
+        if (user === room.hostId) {
+            let players = [];
+            players = players.concat([...room.red]);
+            players = players.concat([...room.blu]);
+            if (room.redMaster)
+                players.push(room.redMaster);
+            if (room.bluMaster)
+                players.push(room.bluMaster);
+            shuffleArray(players);
+            room.redMaster = players.shift();
+            room.bluMaster = players.shift();
+            room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
+            room.blu = new JSONSet(players);
+            update();
+            io.to(room.roomId).emit("masterKeyUpdated");
+        }
     });
     socket.on("give-host", playerId => {
-        if (playerId)
+        if (playerId && user === room.hostId)
             room.hostId = playerId;
         update();
     });
