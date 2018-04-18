@@ -4,7 +4,8 @@ const
     express = require('express'),
     socketIo = require("socket.io"),
     reCAPTCHA = require('recaptcha2'),
-    logging = false;
+    logging = false,
+    useCaptcha = false;
 
 function makeId() {
     let text = "";
@@ -45,7 +46,9 @@ const
     intervals = {},
     masterKeys = {},
     authorizedUsers = {},
-    attemptIPs = {};
+    attemptIPs = {},
+    roomWords = {},
+    roomPics = {};
 
 // Server part
 const app = express();
@@ -56,27 +59,13 @@ app.get('/codenames', function (req, res) {
 });
 
 const server = app.listen(1488);
-console.log('Server listening on port 8000');
+console.log('Server listening on port 1488');
 
 // Socket.IO part
 const io = socketIo(server);
 
 io.on("connection", socket => {
-    let room, user, userToken, initArgs,
-        colorList = [
-            "#E91E63",
-            "#F44336",
-            "#FF5722",
-            "#FFEB3B",
-            "#8BC34A",
-            "#009688",
-            "#03A9F4",
-            "#3F51B5",
-            "#673AB7",
-            "#e91ec0",
-            "#795548",
-            "#9E9E9E"
-        ];
+    let room, user, userToken, initArgs;
     socket.use((packet, next) => {
         if (packet[0] === "init" || packet[0] === "auth" || room) {
             if (logging)
@@ -110,7 +99,17 @@ io.on("connection", socket => {
             room.playerTokens = [];
         },
         dealWords = () => {
-            room.words = shuffleArray((room.picturesMode ? defaultCodePics : defaultCodeWords).slice()).splice(0, 25);
+            roomWords[room.roomId] = roomWords[room.roomId] || [];
+            roomPics[room.roomId] = roomPics[room.roomId] || [];
+            if (!room.picturesMode) {
+                if (roomWords[room.roomId].length < 25)
+                    roomWords[room.roomId] = shuffleArray(defaultCodeWords.slice());
+                room.words = roomWords[room.roomId].splice(0, 25);
+            } else {
+                if (roomPics[room.roomId].length < 25)
+                    roomPics[room.roomId] = shuffleArray(defaultCodePics.slice());
+                room.words = roomPics[room.roomId].splice(0, 25);
+            }
             room.key = [];
             masterKeys[room.roomId] = shuffleArray([]
                 .concat(Array.apply(null, new Array(8)).map(() => "red"))
@@ -301,7 +300,7 @@ io.on("connection", socket => {
     socket.on("init", args => {
         userToken = args.userId + args.roomId;
         initArgs = args;
-        if (!authorizedUsers[userToken])
+        if (useCaptcha && !authorizedUsers[userToken])
             socket.emit("auth-required");
         else
             init();
@@ -326,6 +325,8 @@ io.on("connection", socket => {
     socket.on("request-master-key", () => {
         if (room.redMaster === user || room.bluMaster === user)
             socket.emit("masterKey", masterKeys[room.roomId]);
+        else
+            socket.emit("masterKey", null);
     });
     socket.on("change-color", () => {
         room.playerColors[user] = getRandomColor();
@@ -422,6 +423,7 @@ io.on("connection", socket => {
         room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
         room.blu = new JSONSet(players);
         update();
+        io.to(room.roomId).emit("masterKeyUpdated");
     });
     socket.on("give-host", playerId => {
         if (playerId)
