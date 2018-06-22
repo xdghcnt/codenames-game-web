@@ -37,9 +37,10 @@ const recaptcha = new reCAPTCHA({
 });
 
 let defaultCodeWords;
-fs.readFile(__dirname + "/words.txt", "utf8", function (err, words) {
-    defaultCodeWords = words.split(" ");
+fs.readFile(__dirname + "/words.json", "utf8", function (err, words) {
+    defaultCodeWords = JSON.parse(words);
 });
+
 const defaultCodePics = Array(278).fill().map((_, idx) => idx + 1);
 const
     rooms = {},
@@ -48,7 +49,9 @@ const
     authorizedUsers = {},
     attemptIPs = {},
     roomWords = {},
-    roomPics = {};
+    roomPics = {},
+    prevEventTimeIP = {},
+    sockets = {};
 
 // Server part
 const app = express();
@@ -58,15 +61,24 @@ app.get('/codenames', function (req, res) {
     res.sendFile(__dirname + '/public/index.html');
 });
 
-const server = app.listen(1488);
-console.log('Server listening on port 1488');
+const server = app.listen(14888);
+console.log('Server listening on port 14888');
 
 // Socket.IO part
-const io = socketIo(server);
+const io = socketIo(server, {maxHttpBufferSize: 5000});
 
 io.on("connection", socket => {
-    let room, user, userToken, initArgs;
+    if (sockets[socket.handshake.address])
+        sockets[socket.handshake.address].disconnect(true);
+    sockets[socket.handshake.address] = socket;
+    let room, user, prevRestartTime = new Date(), updateNeeded = false;
+    prevEventTimeIP[socket.handshake.address] = +(new Date()) - 105;
     socket.use((packet, next) => {
+        if (+(new Date()) - prevEventTimeIP[socket.handshake.address] < 25) {
+            socket.disconnect(true);
+            return;
+        }
+        prevEventTimeIP[socket.handshake.address] = new Date();
         if (packet[0] === "init" || packet[0] === "auth" || room) {
             if (logging)
                 fs.appendFile(__dirname + "/logs.txt", `${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)} \n`, () => {
@@ -74,7 +86,13 @@ io.on("connection", socket => {
             return next();
         }
     });
-    let update = () => io.to(room.roomId).emit("state", room),
+    const updateInterval = setInterval(() => {
+        if (updateNeeded) {
+            io.to(room.roomId).emit("state", room);
+            updateNeeded = false;
+        }
+    }, 100);
+    const update = () => io.to(room.roomId).emit("state", room),
         leaveTeams = () => {
             room.playerTokens = [];
             room.red.delete(user);
@@ -102,8 +120,14 @@ io.on("connection", socket => {
             roomWords[room.roomId] = roomWords[room.roomId] || [];
             roomPics[room.roomId] = roomPics[room.roomId] || [];
             if (!room.picturesMode) {
-                if (roomWords[room.roomId].length < 25)
-                    roomWords[room.roomId] = shuffleArray(defaultCodeWords.slice());
+                if (roomWords[room.roomId].length < 25) {
+                    roomWords[room.roomId] = [];
+                    room.wordsLevel.forEach((value, index) => {
+                        if (value)
+                            roomWords[room.roomId] = roomWords[room.roomId].concat(defaultCodeWords[index])
+                    });
+                    shuffleArray(roomWords[room.roomId]);
+                }
                 room.words = roomWords[room.roomId].splice(0, 25);
             } else {
                 if (roomPics[room.roomId].length < 25)
@@ -243,7 +267,8 @@ io.on("connection", socket => {
         getRandomColor = () => {
             return "#" + ((1 << 24) * Math.random() | 0).toString(16);
         },
-        init = () => {
+        canStartGame = () => Object.keys(room.playerNames).length > 1 && (+(new Date()) - prevRestartTime) > 3000,
+        init = (initArgs) => {
             socket.join(initArgs.roomId);
             user = initArgs.userId;
             if (!rooms[initArgs.roomId]) {
@@ -280,30 +305,29 @@ io.on("connection", socket => {
                 masterTime: 60,
                 teamTime: 60,
                 addTime: 15,
-                tokenDelay: null,
+                tokenDelay: 1500,
                 time: null,
                 masterAdditionalTime: false,
                 passIndex: null,
                 paused: false,
                 picturesMode: false,
-                authRequired: false
+                authRequired: false,
+                wordsLevel: [false, true, true, true]
             };
             if (!room.playerNames[user])
                 room.spectators.add(user);
             room.onlinePlayers.add(user);
-            room.playerNames[user] = initArgs.userName;
+            room.playerNames[user] = initArgs.userName.substr && initArgs.userName.substr(0, 60);
             room.playerColors[user] = room.playerColors[user] || getRandomColor();
             if (room.redMaster === user || room.bluMaster === user)
                 socket.emit("masterKey", masterKeys[room.roomId]);
             update();
         };
     socket.on("init", args => {
-        userToken = args.userId + args.roomId;
-        initArgs = args;
-        if (useCaptcha && !authorizedUsers[userToken])
+        if (useCaptcha && !authorizedUsers[args.userId + args.roomId])
             socket.emit("auth-required");
         else
-            init();
+            init(args);
     });
     socket.on("word-click", (wordIndex) => {
         if (room.hasCommand && ((room.red.has(user) && room.teamTurn === "red") || (room.blu.has(user) && room.teamTurn === "blu")) && !room.key[wordIndex]) {
@@ -320,7 +344,7 @@ io.on("connection", socket => {
             update();
         }
         if (room.red.has(user) || room.blu.has(user))
-            io.to(room.roomId).emit("highlight-word", wordIndex);
+            io.to(room.roomId).emit("highlight-word", wordIndex, user);
     });
     socket.on("request-master-key", () => {
         if (room.redMaster === user || room.bluMaster === user)
@@ -338,7 +362,7 @@ io.on("connection", socket => {
         update();
     });
     socket.on("start-game", () => {
-        if (user === room.hostId) {
+        if (user === room.hostId && canStartGame()) {
             room.picturesMode = false;
             room.timed = false;
             room.tokenDelay = 3000;
@@ -347,7 +371,7 @@ io.on("connection", socket => {
         }
     });
     socket.on("start-game-timed", () => {
-        if (user === room.hostId) {
+        if (user === room.hostId && canStartGame()) {
             room.picturesMode = false;
             room.timed = true;
             room.tokenDelay = 1500;
@@ -356,13 +380,20 @@ io.on("connection", socket => {
         }
     });
     socket.on("start-game-pictures", () => {
-        if (user === room.hostId) {
+        if (user === room.hostId && canStartGame()) {
             room.picturesMode = true;
             room.timed = true;
             room.tokenDelay = 1500;
             startGame();
             update();
         }
+    });
+    socket.on("toggle-words-level", (level) => {
+        if (user === room.hostId && ~[0, 1, 2, 3].indexOf(level) && room.wordsLevel.filter((value, index) => index !== level && value).length > 0) {
+            roomWords[room.roomId] = [];
+            room.wordsLevel[level] = !room.wordsLevel[level];
+        }
+        update();
     });
     socket.on("set-master-time", (value) => {
         if (user === room.hostId && parseInt(value))
@@ -396,10 +427,16 @@ io.on("connection", socket => {
     });
     socket.on("toggle-pause", () => {
         if (user === room.hostId) {
-            room.paused = !room.paused;
-            if (room.words.length === 0 || room.teamWin !== null)
+            if (canStartGame() && (room.words.length === 0 || room.teamWin !== null))
                 startGame();
+            else
+                room.paused = !room.paused;
         }
+        update();
+    });
+    socket.on("restart-game", () => {
+        if (user === room.hostId && canStartGame())
+            startGame();
         update();
     });
     socket.on("skip-team", () => {
@@ -413,7 +450,7 @@ io.on("connection", socket => {
     });
     socket.on("change-name", value => {
         if (value)
-            room.playerNames[user] = value;
+            room.playerNames[user] = value.substr && value.substr(0, 60);
         update();
     });
     socket.on("remove-player", playerId => {
@@ -447,7 +484,7 @@ io.on("connection", socket => {
             room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
             room.blu = new JSONSet(players);
             update();
-            io.to(room.roomId).emit("masterKeyUpdated");
+            //io.to(room.roomId).emit("masterKeyUpdated");
         }
     });
     socket.on("give-host", playerId => {
@@ -456,16 +493,18 @@ io.on("connection", socket => {
         update();
     });
     socket.on("team-join", (color, isMaster) => {
-        if (!isMaster) {
-            leaveTeams();
-            room[color].add(user);
+        if (color === "red" || color === "blu") {
+            if (!isMaster) {
+                leaveTeams();
+                room[color].add(user)
+            }
+            else if (!room[`${color}Master`]) {
+                leaveTeams();
+                room[`${color}Master`] = user;
+                socket.emit("masterKey", masterKeys[room.roomId]);
+            }
+            update();
         }
-        else if (!room[`${color}Master`]) {
-            leaveTeams();
-            room[`${color}Master`] = user;
-            socket.emit("masterKey", masterKeys[room.roomId]);
-        }
-        update();
     });
     socket.on("spectators-join", () => {
         leaveTeams();
@@ -480,18 +519,20 @@ io.on("connection", socket => {
             room.spectators.delete(user);
             update();
         }
+        delete sockets[socket.handshake.address];
+        clearInterval(updateInterval);
     });
     socket.on("ping", () => {
         room.onlinePlayers.add(user);
         update();
     });
-    socket.on("auth", (key) => {
+    socket.on("auth", (key, initArgs) => {
         if (initArgs && !room && !attemptIPs[socket.handshake.address]) {
             attemptIPs[socket.handshake.address] = true;
             recaptcha.validate(key)
                 .then(() => {
                     authorizedUsers[initArgs.userId + initArgs.roomId] = true;
-                    init();
+                    init(initArgs);
                 })
                 .catch(() => socket.emit("reload"))
                 .then(() => {

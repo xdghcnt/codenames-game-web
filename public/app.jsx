@@ -28,7 +28,8 @@ class Words extends React.Component {
                              + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
                          }>
                         <div className="word-box" data-wordIndex={index}>
-                            <span>{data.picturesMode ? (<img src={`pictures/pic${word}.png`}/>) : word}</span>
+                            <span>{data.picturesMode ? (
+                                <img src={`pictures/pic${word}.png`}/>) : word && window.hyphenate(word)}</span>
                             <div className="player-tokens">
                                 {data.playerTokens[index] && data.playerTokens[index].filter(player => player).map(
                                     player => (
@@ -165,24 +166,33 @@ class Player extends React.Component {
                 "player"
                 + (!~data.onlinePlayers.indexOf(id) ? " offline" : "")
                 + (id === data.userId ? " self" : "")
-            }>
+            }
+                 data-playerId={id}>
                 <div className="player-color" style={{background: data.playerColors[id]}}
-                     onClick={() => (id === data.userId) && this.props.handleChangeColor()}/>
+                     onClick={(evt) => !evt.stopPropagation() && (id === data.userId) && this.props.handleChangeColor()}/>
                 {data.playerNames[id]}
-                {(data.hostId === data.userId && data.userId !== id) ? (
-                    <div className="player-host-controls">
+                <div className="player-host-controls">
+                    {(data.hostId === data.userId && data.userId !== id) ? (
                         <i className="material-icons host-button"
                            title="Give host"
                            onClick={(evt) => this.props.handleGiveHost(id, evt)}>
                             vpn_key
                         </i>
+                    ) : ""}
+                    {(data.hostId === data.userId && data.userId !== id) ? (
                         <i className="material-icons host-button"
                            title="Remove"
                            onClick={(evt) => this.props.handleRemovePlayer(id, evt)}>
                             delete_forever
                         </i>
-                    </div>
-                ) : ""}
+                    ) : ""}
+                    {(data.hostId === id) ? (
+                        <i className="material-icons host-button inactive"
+                           title="Game host">
+                            stars
+                        </i>
+                    ) : ""}
+                </div>
             </div>
         );
     }
@@ -246,26 +256,38 @@ class Game extends React.Component {
                 masterKey: masterKey
             }));
         });
-        this.socket.on("masterKeyUpdated", () => this.socket.emit("request-master-key"));
+        this.socket.on("masterKeyUpdated", () => setTimeout(() => this.socket.emit("request-master-key"), 500));
         this.socket.on("message", text => {
             alert(text);
         });
         this.socket.on("disconnect", () => {
             this.setState({
-                inited: false
+                inited: false,
+                disconnected: true
             });
-            window.location.reload();
         });
         this.socket.on("reload", () => {
-            window.location.reload();
+            setTimeout(() => window.location.reload(), 3000);
         });
-        this.socket.on("highlight-word", (wordIndex) => {
-            const node = document.querySelector(`[data-wordIndex='${wordIndex}']`);
-            if (node) {
-                if (!parseInt(localStorage.muteSounds))
-                    this.tapSound.play();
-                node.classList.add("highlight-anim");
-                setTimeout(() => node.classList.remove("highlight-anim"), 0);
+        this.socket.on("highlight-word", (wordIndex, playerId) => {
+            const wordNode = document.querySelector(`[data-wordIndex='${wordIndex}']`);
+            if (wordNode) {
+                if (!parseInt(localStorage.muteSounds)) {
+                    const
+                        volR = (wordIndex % 5) / 4,
+                        volL = 1 - volR;
+                    this.tapSoundL.volume = Math.max(volL, 0.2) * 0.3;
+                    this.tapSoundR.volume = Math.max(volR, 0.2) * 0.3;
+                    this.tapSoundL.play();
+                    this.tapSoundR.play();
+                }
+                wordNode.classList.add("highlight-anim");
+                setTimeout(() => wordNode && wordNode.classList.remove("highlight-anim"), 0);
+            }
+            const playerNode = document.querySelector(`[data-playerId='${playerId}']`);
+            if (playerNode) {
+                playerNode.classList.add("highlight-anim");
+                setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 0);
             }
         });
         this.socket.on("auth-required", () => {
@@ -276,7 +298,7 @@ class Game extends React.Component {
             if (grecaptcha)
                 grecaptcha.render("captcha-container", {
                     sitekey: "",
-                    callback: (key) => this.socket.emit("auth", key)
+                    callback: (key) => this.socket.emit("auth", key, initArgs)
                 });
             else
                 setTimeout(() => window.location.reload(), 3000)
@@ -285,10 +307,11 @@ class Game extends React.Component {
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("timer-beep.mp3");
         this.timerSound.volume = 0.5;
-        this.tapSound = new Audio("tap.mp3");
-        this.tapSound.volume = 0.3;
+        this.tapSoundL = new Audio("tap_l.ogg");
+        this.tapSoundR = new Audio("tap_r.ogg");
         this.chimeSound = new Audio("chime.mp3");
         this.chimeSound.volume = 0.25;
+        window.hyphenate = createHyphenator(hyphenationPatternsRu);
     }
 
     constructor() {
@@ -386,7 +409,7 @@ class Game extends React.Component {
             this.socket.emit(action);
     }
 
-    handleChangeTime (value, type) {
+    handleChangeTime(value, type) {
         this.socket.emit(type, value);
     }
 
@@ -403,6 +426,15 @@ class Game extends React.Component {
     handleClickStart(mode) {
         if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?"))
             this.socket.emit(mode);
+    }
+
+    handleClickRestart() {
+        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?"))
+            this.socket.emit("restart-game");
+    }
+
+    handleToggleWords(level) {
+        this.socket.emit("toggle-words-level", level);
     }
 
     handleToggleTheme() {
@@ -432,8 +464,8 @@ class Game extends React.Component {
 
     render() {
         clearTimeout(this.timerTimeout);
-        if (!this.state.authRequired && this.state.inited && !this.state.playerNames[this.state.userId])
-            return (<div className="kicked">You were kicked</div>);
+        if (this.state.disconnected)
+            return (<div className="kicked">Disconnected</div>);
         else if (this.state.inited) {
             document.body.classList.add("captcha-solved");
             const
@@ -497,7 +529,7 @@ class Game extends React.Component {
                                         handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}/>
                         </div>
                         <div className="host-controls">
-                            {isHost ? (<div className="host-controls-menu">
+                            <div className="host-controls-menu">
                                 <div className="little-controls">
                                     {data.timed ? (<div className="game-settings">
                                         <div className="set-master-time"><i title="master time"
@@ -534,6 +566,29 @@ class Game extends React.Component {
                                             className="material-icons">casino</i>
                                         </div>) : ""}
                                 </div>
+                                {!this.state.picturesMode ? (<div className="little-controls words-level">
+                                    <span className="words-level-label">Words level:</span>
+                                    <span
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[0] ? " level-selected" : "")}
+                                        onClick={() => !inProcess && this.handleToggleWords(0)}>
+                                        Original
+                                    </span>
+                                    <span
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[1] ? " level-selected" : "")}
+                                        onClick={() => !inProcess && this.handleToggleWords(1)}>
+                                        Easy
+                                    </span>
+                                    <span
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[2] ? " level-selected" : "")}
+                                        onClick={() => !inProcess && this.handleToggleWords(2)}>
+                                        Normal
+                                    </span>
+                                    <span
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[3] ? " level-selected" : "")}
+                                        onClick={() => !inProcess && this.handleToggleWords(3)}>
+                                        Hard
+                                    </span>
+                                </div>) : ""}
                                 <div className="start-game-buttons">
                                     <div
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (!this.state.timed ? " level-selected" : "")}
@@ -551,8 +606,11 @@ class Game extends React.Component {
                                         className="material-icons">photo</i>Pictures
                                     </div>
                                 </div>
-                            </div>) : ""}
+                            </div>
                             <div className="side-buttons">
+                                {(isHost && !inProcess && data.words.length > 0) ?
+                                    (<i onClick={() => this.handleClickRestart()}
+                                        className="material-icons start-game settings-button">sync</i>) : ""}
                                 {isHost ? (!inProcess
                                     ? (<i onClick={() => this.handleClickTogglePause()}
                                           className="material-icons start-game settings-button">play_arrow</i>)
@@ -576,7 +634,7 @@ class Game extends React.Component {
                                     : (<i onClick={() => this.handleToggleTheme()}
                                           className="toggle-theme material-icons settings-button">wb_sunny</i>)}
                             </div>
-                            <i className="material-icons">settings</i>
+                            <i className="settings-hover-button material-icons">settings</i>
                         </div>
                     </div>
                 </div>
