@@ -239,7 +239,9 @@ class Game extends React.Component {
         initArgs.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.userId;
         initArgs.userName = localStorage.userName;
-        this.socket = io();
+        this.socket = io({
+            transports: ['websocket']
+        });
         this.socket.on("state", state => {
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
                 this.chimeSound.play();
@@ -473,7 +475,7 @@ class Game extends React.Component {
                 isHost = data.hostId === data.userId,
                 isMaster = data.bluMaster === data.userId || data.redMaster === data.userId,
                 inProcess = data.words.length > 0 && data.teamWin === null && !data.paused;
-            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0) && !data.teamWin) {
+            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || data.masterFirstTime !== 0) && !data.teamWin) {
                 let timeStart = new Date();
                 this.timerTimeout = setTimeout(() => {
                     if (!this.state.paused) {
@@ -532,11 +534,20 @@ class Game extends React.Component {
                             <div className="host-controls-menu">
                                 <div className="little-controls">
                                     {data.timed ? (<div className="game-settings">
+                                        <div className="set-master-first-time"><i title="master first time"
+                                                                            className="material-icons">timer</i>
+                                            {(isHost && !inProcess) ? (<input id="goal"
+                                                                              type="number"
+                                                                              defaultValue={this.state.masterFirstTime} min="0"
+                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
+                                                                                  && this.handleChangeTime(evt.target.valueAsNumber, "set-master-first-time")}
+                                            />) : (<span className="value">{this.state.masterFirstTime}</span>)}
+                                        </div>
                                         <div className="set-master-time"><i title="master time"
                                                                             className="material-icons">alarm</i>
                                             {(isHost && !inProcess) ? (<input id="goal"
                                                                               type="number"
-                                                                              defaultValue="60" min="0"
+                                                                              defaultValue={this.state.masterTime} min="0"
                                                                               onChange={evt => !isNaN(evt.target.valueAsNumber)
                                                                                   && this.handleChangeTime(evt.target.valueAsNumber, "set-master-time")}
                                             />) : (<span className="value">{this.state.masterTime}</span>)}
@@ -545,7 +556,7 @@ class Game extends React.Component {
                                                                           className="material-icons">alarm_on</i>
                                             {(isHost && !inProcess) ? (<input id="round-time"
                                                                               type="number"
-                                                                              defaultValue="60" min="0"
+                                                                              defaultValue={this.state.teamTime} min="0"
                                                                               onChange={evt => !isNaN(evt.target.valueAsNumber)
                                                                                   && this.handleChangeTime(evt.target.valueAsNumber, "set-team-time")}
                                             />) : (<span className="value">{this.state.teamTime}</span>)}
@@ -554,7 +565,7 @@ class Game extends React.Component {
                                                                          className="material-icons">alarm_add</i>
                                             {(isHost && !inProcess) ? (<input id="round-time"
                                                                               type="number"
-                                                                              defaultValue="15" min="0"
+                                                                              defaultValue={this.state.addTime} min="0"
                                                                               onChange={evt => !isNaN(evt.target.valueAsNumber)
                                                                                   && this.handleChangeTime(evt.target.valueAsNumber, "set-add-time")}
                                             />) : (<span className="value">{this.state.addTime}</span>)}
@@ -562,7 +573,8 @@ class Game extends React.Component {
                                     </div>) : ""}
                                     {(isHost && !inProcess) ? (
                                         <div className="shuffle-players settings-button"
-                                             onClick={() => this.handleClickShuffle()}>shuffle players<i
+                                             onClick={() => this.handleClickShuffle()}><i
+                                            title="shuffle players"
                                             className="material-icons">casino</i>
                                         </div>) : ""}
                                 </div>

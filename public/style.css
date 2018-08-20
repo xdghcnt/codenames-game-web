@@ -44,6 +44,24 @@ body.dark-theme {
     color: #cccaca;
 }
 
+.player {
+    text-shadow: 0 0 0 #80808000;
+    transition: text-shadow 0.5s ease-out;
+}
+
+.player.highlight-anim {
+    text-shadow: 0 0 16px gray;
+    transition: none;
+}
+
+.dark-theme .player {
+    text-shadow: 0 0 0 #ffffff00;
+}
+
+.dark-theme .player.highlight-anim {
+    text-shadow: 0 0 16px white;
+}
+
 .player.self {
     font-weight: bold;
 }
@@ -68,6 +86,7 @@ body.dark-theme {
     cursor: pointer;
     background: rgba(255, 252, 245, 0.58);
     user-select: none;
+    white-space: nowrap;
 }
 
 .teamsLocked .spectators {
@@ -96,7 +115,7 @@ body.dark-theme {
     right: 0;
     bottom: 0;
     padding: 6px;
-    background: rgb(255, 252, 245);
+    background: rgba(255, 252, 245, 0.58);
     user-select: none;
     cursor: default;
     text-align: right;
@@ -169,7 +188,7 @@ body.dark-theme {
     font-weight: bold;
     font-family: 'Roboto Condensed', sans-serif;
     letter-spacing: 0.5px;
-    font-size: 2.7vmin;
+    font-size: 2.9vmin;
     align-self: stretch;
     padding: 12px;
 }
@@ -485,6 +504,7 @@ body.dark-theme {
 .player-host-controls {
     margin-left: 5px;
     display: none;
+    vertical-align: middle;
 }
 
 .player:hover .player-host-controls, .command:hover .player-host-controls {
@@ -495,6 +515,10 @@ body.dark-theme {
     font-size: 16px;
     cursor: pointer;
     vertical-align: text-top;
+}
+
+.host-button.inactive {
+    cursor: default;
 }
 
 .kicked {
@@ -589,7 +613,7 @@ body {
 }
 
 .little-controls input {
-    width: 39px;
+    width: 45px;
     background: transparent;
     border: 1px solid;
     color: #cccaca;
@@ -616,6 +640,14 @@ body {
 
 .dark-theme .settings-button:hover {
     background: #4e4e4e;
+}
+
+.settings-button.level-selected:hover {
+    background: #f8e6e4;
+}
+
+.dark-theme .settings-button.level-selected:hover {
+    background: #525252;
 }
 
 .level-selected {
@@ -731,4 +763,18 @@ body {
 
 .dark-theme .start-game-buttons .settings-button {
     color: #cccaca;
+}
+
+.settings-hover-button {
+    padding: 2px;
+}
+
+.little-controls.words-level > span {
+    padding: 2px 5px;
+    display: inline-block;
+    margin: 4px;
+}
+
+.little-controls.words-level {
+    text-align: center;
 }

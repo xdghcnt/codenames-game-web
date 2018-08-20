@@ -55,9 +55,22 @@ const
 
 // Server part
 const app = express();
+
+function log(text) {
+    if (logging)
+        fs.appendFile(__dirname + "/logs.txt", `${text}\n`, () => {
+        })
+}
+
+app.use('/', function (req, res, next) {
+    console.log(`${(new Date()).toISOString()}: ${req.headers['x-forwarded-for'] || req.connection.remoteAddress} - static: ${req.url}`);
+    next();
+});
+
 app.use('/', express.static(path.join(__dirname, 'public')));
 
 app.get('/codenames', function (req, res) {
+    log(`${(new Date()).toISOString()}: ${req.headers['x-forwarded-for'] || req.connection.remoteAddress} - index.html`);
     res.sendFile(__dirname + '/public/index.html');
 });
 
@@ -65,24 +78,27 @@ const server = app.listen(14888);
 console.log('Server listening on port 14888');
 
 // Socket.IO part
-const io = socketIo(server, {maxHttpBufferSize: 5000});
+const io = socketIo(server, {maxHttpBufferSize: 5000, transports: ["websocket"]});
 
 io.on("connection", socket => {
-    if (sockets[socket.handshake.address])
+    log(`${(new Date()).toISOString()}: ${socket.handshake.address} - connected to socket`);
+    if (sockets[socket.handshake.address]) {
+        log(`${(new Date()).toISOString()}: ${socket.handshake.address} - disconnected (new session)`);
         sockets[socket.handshake.address].disconnect(true);
+        return;
+    }
     sockets[socket.handshake.address] = socket;
     let room, user, prevRestartTime = new Date(), updateNeeded = false;
     prevEventTimeIP[socket.handshake.address] = +(new Date()) - 105;
     socket.use((packet, next) => {
-        if (+(new Date()) - prevEventTimeIP[socket.handshake.address] < 25) {
+        log(`${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)}`);
+        if (+(new Date()) - prevEventTimeIP[socket.handshake.address] < 50) {
+            log(`${(new Date()).toISOString()}: ${socket.handshake.address} - disconnected (too fast)`);
             socket.disconnect(true);
             return;
         }
         prevEventTimeIP[socket.handshake.address] = new Date();
         if (packet[0] === "init" || packet[0] === "auth" || room) {
-            if (logging)
-                fs.appendFile(__dirname + "/logs.txt", `${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)} \n`, () => {
-                });
             return next();
         }
     });
@@ -172,11 +188,13 @@ io.on("connection", socket => {
             clearTimeout(intervals[room.roomId].token);
             dealWords();
             updateCount();
+            if (room.timed && room.masterFirstTime)
+                startMasterTimer(true);
         },
-        startMasterTimer = () => {
+        startMasterTimer = (first) => {
             clearInterval(intervals[room.roomId].move);
             room.masterAdditionalTime = false;
-            room.time = room.masterTime * 1000;
+            room.time = (first ? room.masterFirstTime : room.masterTime) * 1000;
             let time = new Date();
             intervals[room.roomId].move = setInterval(() => {
                 if (!room.paused) {
@@ -267,7 +285,7 @@ io.on("connection", socket => {
         getRandomColor = () => {
             return "#" + ((1 << 24) * Math.random() | 0).toString(16);
         },
-        canStartGame = () => Object.keys(room.playerNames).length > 1 && (+(new Date()) - prevRestartTime) > 3000,
+        canStartGame = () => Object.keys(room.playerNames).length > 0 && (+(new Date()) - prevRestartTime) > 3000,
         init = (initArgs) => {
             socket.join(initArgs.roomId);
             user = initArgs.userId;
@@ -303,6 +321,7 @@ io.on("connection", socket => {
                 bluTime: 0,
                 timed: true,
                 masterTime: 60,
+                masterFirstTime: 0,
                 teamTime: 60,
                 addTime: 15,
                 tokenDelay: 1500,
@@ -398,6 +417,11 @@ io.on("connection", socket => {
     socket.on("set-master-time", (value) => {
         if (user === room.hostId && parseInt(value))
             room.masterTime = parseInt(value);
+        update();
+    });
+    socket.on("set-master-first-time", (value) => {
+        if (user === room.hostId && !isNaN(parseInt(value)))
+            room.masterFirstTime = parseInt(value);
         update();
     });
     socket.on("set-team-time", (value) => {
