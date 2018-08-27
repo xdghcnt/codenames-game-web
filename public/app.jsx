@@ -171,6 +171,15 @@ class Player extends React.Component {
                 <div className="player-color" style={{background: data.playerColors[id]}}
                      onClick={(evt) => !evt.stopPropagation() && (id === data.userId) && this.props.handleChangeColor()}/>
                 {data.playerNames[id]}
+                {((~data.traitors.indexOf(id)) || data.masterTraitor === id) ? (
+                    <div className="traitor-icon">
+                        <i className="material-icons host-button inactive"
+                           title="Traitor">
+                            offline_bolt
+                        </i>
+
+                    </div>
+                ) : ""}
                 <div className="player-host-controls">
                     {(data.hostId === data.userId && data.userId !== id) ? (
                         <i className="material-icons host-button"
@@ -252,10 +261,11 @@ class Game extends React.Component {
             if (!~state.onlinePlayers.indexOf(this.userId))
                 this.socket.emit("ping");
         });
-        this.socket.on("masterKey", masterKey => {
+        this.socket.on("masterKey", (masterKey, traitor) => {
             this.setState(Object.assign({}, this.state, {
                 userId: this.userId,
-                masterKey: masterKey
+                masterKey: masterKey,
+                masterTraitor: traitor
             }));
         });
         this.socket.on("masterKeyUpdated", () => setTimeout(() => this.socket.emit("request-master-key"), 500));
@@ -464,6 +474,10 @@ class Game extends React.Component {
         this.socket.emit("toggle-lock");
     }
 
+    toggleTraitorMode() {
+        this.socket.emit("toggle-traitor-mode");
+    }
+
     render() {
         clearTimeout(this.timerTimeout);
         if (this.state.disconnected)
@@ -475,7 +489,7 @@ class Game extends React.Component {
                 isHost = data.hostId === data.userId,
                 isMaster = data.bluMaster === data.userId || data.redMaster === data.userId,
                 inProcess = data.words.length > 0 && data.teamWin === null && !data.paused;
-            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || data.masterFirstTime !== 0) && !data.teamWin) {
+            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || (data.masterFirstTime !== 0 && data.words.length)) && !data.teamWin) {
                 let timeStart = new Date();
                 this.timerTimeout = setTimeout(() => {
                     if (!this.state.paused) {
@@ -534,20 +548,22 @@ class Game extends React.Component {
                             <div className="host-controls-menu">
                                 <div className="little-controls">
                                     {data.timed ? (<div className="game-settings">
-                                        <div className="set-master-first-time"><i title="master first time"
-                                                                            className="material-icons">timer</i>
+                                        <div className="set-master-first-time"><i title="master first time (0 as ∞)"
+                                                                                  className="material-icons">timer</i>
                                             {(isHost && !inProcess) ? (<input id="goal"
                                                                               type="number"
-                                                                              defaultValue={this.state.masterFirstTime} min="0"
+                                                                              defaultValue={this.state.masterFirstTime}
+                                                                              min="0"
                                                                               onChange={evt => !isNaN(evt.target.valueAsNumber)
                                                                                   && this.handleChangeTime(evt.target.valueAsNumber, "set-master-first-time")}
-                                            />) : (<span className="value">{this.state.masterFirstTime}</span>)}
+                                            />) : (<span className="value">{this.state.masterFirstTime || "∞"}</span>)}
                                         </div>
                                         <div className="set-master-time"><i title="master time"
                                                                             className="material-icons">alarm</i>
                                             {(isHost && !inProcess) ? (<input id="goal"
                                                                               type="number"
-                                                                              defaultValue={this.state.masterTime} min="0"
+                                                                              defaultValue={this.state.masterTime}
+                                                                              min="0"
                                                                               onChange={evt => !isNaN(evt.target.valueAsNumber)
                                                                                   && this.handleChangeTime(evt.target.valueAsNumber, "set-master-time")}
                                             />) : (<span className="value">{this.state.masterTime}</span>)}
@@ -620,6 +636,11 @@ class Game extends React.Component {
                                 </div>
                             </div>
                             <div className="side-buttons">
+                                <span
+                                    className={"traitor-button" + ((isHost && !inProcess) ? " settings-button" : "") + (this.state.traitorMode ? " level-selected" : "")}
+                                    onClick={() => !inProcess && this.toggleTraitorMode()}>
+                                        <i className="material-icons">offline_bolt</i>Traitor mode
+                                    </span>
                                 {(isHost && !inProcess && data.words.length > 0) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}

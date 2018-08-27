@@ -50,6 +50,7 @@ const
     attemptIPs = {},
     roomWords = {},
     roomPics = {},
+    roomTraitors = {},
     prevEventTimeIP = {},
     sockets = {};
 
@@ -166,6 +167,7 @@ io.on("connection", socket => {
         },
         endGame = () => {
             room.teamsLocked = false;
+            room.traitors = [roomTraitors[room.roomId].blu, roomTraitors[room.roomId].red];
             clearInterval(intervals[room.roomId].team);
             clearInterval(intervals[room.roomId].move);
             intervals[room.roomId].team = undefined;
@@ -179,6 +181,7 @@ io.on("connection", socket => {
             room.redCommands = [];
             room.bluCommands = [];
             room.playerTokens = [];
+            room.traitors = [];
             room.teamWin = null;
             room.time = null;
             room.hasCommand = false;
@@ -186,6 +189,11 @@ io.on("connection", socket => {
             clearInterval(intervals[room.roomId].team);
             clearInterval(intervals[room.roomId].move);
             clearTimeout(intervals[room.roomId].token);
+            if (room.traitorMode)
+                roomTraitors[room.roomId] = {
+                    blu: shuffleArray([...room.blu])[0],
+                    red: shuffleArray([...room.red])[0]
+                };
             dealWords();
             updateCount();
             if (room.timed && room.masterFirstTime)
@@ -292,17 +300,25 @@ io.on("connection", socket => {
             if (!rooms[initArgs.roomId]) {
                 masterKeys[initArgs.roomId] = {};
                 intervals[initArgs.roomId] = {};
+                roomTraitors[initArgs.roomId] = {};
             }
             room = rooms[initArgs.roomId] = rooms[initArgs.roomId] || {
                 inited: true,
                 roomId: initArgs.roomId,
                 hostId: user,
                 spectators: new JSONSet(),
-                playerNames: {},
+                playerNames: {
+                    a: "a",
+                    b: "b",
+                    c: "c",
+                    d: "d",
+                    e: "e",
+                    f: "f"
+                },
                 playerColors: {},
                 onlinePlayers: new JSONSet(),
-                red: new JSONSet(),
-                blu: new JSONSet(),
+                red: new JSONSet(["a", "b", "c"]),
+                blu: new JSONSet(["d", "e", "f"]),
                 key: [],
                 words: [],
                 redMaster: null,
@@ -330,6 +346,8 @@ io.on("connection", socket => {
                 passIndex: null,
                 paused: false,
                 picturesMode: false,
+                traitorMode: false,
+                traitors: [],
                 authRequired: false,
                 wordsLevel: [false, true, true, true]
             };
@@ -338,8 +356,7 @@ io.on("connection", socket => {
             room.onlinePlayers.add(user);
             room.playerNames[user] = initArgs.userName.substr && initArgs.userName.substr(0, 60);
             room.playerColors[user] = room.playerColors[user] || getRandomColor();
-            if (room.redMaster === user || room.bluMaster === user)
-                socket.emit("masterKey", masterKeys[room.roomId]);
+            socket.emit("masterKeyUpdated");
             update();
         };
     socket.on("init", args => {
@@ -367,7 +384,11 @@ io.on("connection", socket => {
     });
     socket.on("request-master-key", () => {
         if (room.redMaster === user || room.bluMaster === user)
-            socket.emit("masterKey", masterKeys[room.roomId]);
+            socket.emit("masterKey", masterKeys[room.roomId], room.redMaster === user ? roomTraitors[room.roomId].blu : roomTraitors[room.roomId].red);
+        else if (roomTraitors[room.roomId].blu === user)
+            socket.emit("masterKey", masterKeys[room.roomId].map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
+        else if (roomTraitors[room.roomId].red === user)
+            socket.emit("masterKey", masterKeys[room.roomId].map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
         else
             socket.emit("masterKey", null);
     });
@@ -412,6 +433,11 @@ io.on("connection", socket => {
             roomWords[room.roomId] = [];
             room.wordsLevel[level] = !room.wordsLevel[level];
         }
+        update();
+    });
+    socket.on("toggle-traitor-mode", () => {
+        if (user === room.hostId)
+            room.traitorMode = !room.traitorMode;
         update();
     });
     socket.on("set-master-time", (value) => {
@@ -525,8 +551,8 @@ io.on("connection", socket => {
             else if (!room[`${color}Master`]) {
                 leaveTeams();
                 room[`${color}Master`] = user;
-                socket.emit("masterKey", masterKeys[room.roomId]);
             }
+            socket.emit("masterKeyUpdated");
             update();
         }
     });

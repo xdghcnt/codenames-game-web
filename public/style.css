@@ -778,3 +778,30 @@ body {
 .little-controls.words-level {
     text-align: center;
 }
+
+.traitor-button {
+    display: inline-block;
+    vertical-align: baseline;
+    position: absolute;
+    left: 6px;
+    bottom: 7px;
+    padding: 0 4px;
+    padding-top: 4px;
+}
+
+.traitor-button i {
+    vertical-align: middle;
+    position: relative;
+    top: -2px;
+}
+
+.traitor-icon {
+    display: inline-block;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+.player i {
+    position: relative;
+    top: -1px;
+}
