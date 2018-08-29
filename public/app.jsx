@@ -245,7 +245,7 @@ class Game extends React.Component {
             localStorage.token = makeId();
         }
         if (!location.hash)
-            location.hash = makeId();
+            history.replaceState(undefined, undefined, "#" + makeId());
         initArgs.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.userId;
         initArgs.userName = localStorage.userName;
