@@ -474,7 +474,8 @@ class Game extends React.Component {
                 data = this.state,
                 isHost = data.hostId === data.userId,
                 isMaster = data.bluMaster === data.userId || data.redMaster === data.userId,
-                inProcess = data.words.length > 0 && data.teamWin === null && !data.paused;
+                inProcess = data.words.length > 0 && data.teamWin === null && !data.paused,
+                parentDir = location.pathname.match(/(.+?)\//)[1];
             if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || (data.masterFirstTime !== 0 && data.words.length)) && !data.teamWin) {
                 let timeStart = new Date();
                 this.timerTimeout = setTimeout(() => {
@@ -627,6 +628,8 @@ class Game extends React.Component {
                                     onClick={() => !inProcess && this.toggleTraitorMode()}>
                                         <i className="material-icons">offline_bolt</i>Traitor mode
                                     </span>
+                                <i onClick={() => window.location = parentDir}
+                                   className="material-icons exit settings-button">exit_to_app</i>
                                 {(isHost && !inProcess && data.words.length > 0) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
