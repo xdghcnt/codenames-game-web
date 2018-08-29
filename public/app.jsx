@@ -623,7 +623,7 @@ class Game extends React.Component {
                             </div>
                             <div className="side-buttons">
                                 <span
-                                    className={"traitor-button" + ((isHost && !inProcess) ? " settings-button" : "") + (this.state.traitorMode ? " level-selected" : "")}
+                                    className={"start-game-buttons traitor-button" + ((isHost && !inProcess) ? " settings-button" : "") + (this.state.traitorMode ? " level-selected" : "")}
                                     onClick={() => !inProcess && this.toggleTraitorMode()}>
                                         <i className="material-icons">offline_bolt</i>Traitor mode
                                     </span>

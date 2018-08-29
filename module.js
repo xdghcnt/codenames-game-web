@@ -303,13 +303,13 @@ function init(wsServer, path) {
                 },
                 "request-master-key": (user) => {
                     if (room.redMaster === user || room.bluMaster === user)
-                        send(room.onlinePlayers, "masterKey", masterKey, room.redMaster === user ? traitors.blu : traitors.red);
+                        send(user, "masterKey", masterKey, room.redMaster === user ? traitors.blu : traitors.red);
                     else if (traitors.blu === user)
-                        send(room.onlinePlayers, "masterKey", masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
+                        send(user, "masterKey", masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
                     else if (traitors.red === user)
-                        send(room.onlinePlayers, "masterKey", masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
+                        send(user, "masterKey", masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
                     else
-                        send(room.onlinePlayers, "masterKey", null);
+                        send(user, "masterKey", null);
                 },
                 "change-color": (user) => {
                     room.playerColors[user] = getRandomColor();

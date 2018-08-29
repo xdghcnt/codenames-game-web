@@ -753,7 +753,7 @@ body {
     color: gray;
 }
 
-.start-game-buttons .settings-button {
+.start-game-buttons .settings-button, .start-game-buttons.settings-button {
     color: black;
 }
 
@@ -761,7 +761,7 @@ body {
     color: #909090;
 }
 
-.dark-theme .start-game-buttons .settings-button {
+.dark-theme .start-game-buttons .settings-button, .dark-theme .start-game-buttons.settings-button {
     color: #cccaca;
 }
 
