@@ -238,19 +238,19 @@ class Game extends React.Component {
         const initArgs = {};
         if (!parseInt(localStorage.darkTheme))
             document.body.classList.add("dark-theme");
-        if (!localStorage.userId) {
+        if (!localStorage.userId || !localStorage.token) {
             while (!localStorage.userName)
                 localStorage.userName = prompt("Your name");
             localStorage.userId = makeId();
+            localStorage.token = makeId();
         }
         if (!location.hash)
             location.hash = makeId();
         initArgs.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.userId;
         initArgs.userName = localStorage.userName;
-        this.socket = io({
-            transports: ['websocket']
-        });
+        initArgs.token = localStorage.token;
+        this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
                 this.chimeSound.play();
@@ -317,13 +317,20 @@ class Game extends React.Component {
         });
         document.title = `Codenames - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
-        this.timerSound = new Audio("timer-beep.mp3");
+        this.timerSound = new Audio("/codenames/timer-beep.mp3");
         this.timerSound.volume = 0.5;
-        this.tapSoundL = new Audio("tap_l.ogg");
-        this.tapSoundR = new Audio("tap_r.ogg");
-        this.chimeSound = new Audio("chime.mp3");
+        this.tapSoundL = new Audio("/codenames/tap_l.ogg");
+        this.tapSoundR = new Audio("/codenames/tap_r.ogg");
+        this.chimeSound = new Audio("/codenames/chime.mp3");
         this.chimeSound.volume = 0.25;
         window.hyphenate = createHyphenator(hyphenationPatternsRu);
+    }
+
+    debouncedEmit(event, data) {
+        clearTimeout(this.debouncedEmitTimer);
+        this.debouncedEmitTimer = setTimeout(() => {
+            this.socket.emit(event, data);
+        }, 100);
     }
 
     constructor() {
@@ -334,7 +341,7 @@ class Game extends React.Component {
     }
 
     handleWordClick(index) {
-        this.socket.emit("word-click", index);
+        this.debouncedEmit("word-click", index);
     }
 
     handleWordPress(index) {
@@ -378,7 +385,7 @@ class Game extends React.Component {
     }
 
     handleChangeColor() {
-        this.socket.emit("change-color");
+        this.debouncedEmit("change-color");
     }
 
     handleRemovePlayer(id, evt) {
@@ -400,29 +407,8 @@ class Game extends React.Component {
             this.socket.emit("edit-command", newCommand, index, color);
     }
 
-    handleHostAction(evt) {
-        const action = evt.target.className;
-        if ((action === "start-game" || action === "start-game-timed") && (!this.state.teamsLocked || confirm("Restart? Are you sure?")))
-            this.socket.emit(action);
-        else if (action === "give-host")
-            this.socket.emit("give-host", prompt("Nickname"));
-        else if (action === "change-name") {
-            const name = prompt("New name");
-            this.socket.emit("change-name", name);
-            localStorage.userName = name;
-        }
-        else if (action === "toggle-theme") {
-            localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
-            document.body.classList.toggle("dark-theme");
-        }
-        else if (action === "set-master-time" || action === "set-team-time" || action === "set-add-time")
-            this.socket.emit(action, prompt("Time in seconds"));
-        else if (action !== "start-game" && action !== "start-game-timed")
-            this.socket.emit(action);
-    }
-
     handleChangeTime(value, type) {
-        this.socket.emit(type, value);
+        this.debouncedEmit(type, value);
     }
 
     handleClickChangeName() {
