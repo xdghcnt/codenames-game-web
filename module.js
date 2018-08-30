@@ -142,7 +142,7 @@ function init(wsServer, path) {
                         .concat(Array.apply(null, new Array(7)).map(() => "white"))
                         .concat(Array.apply(null, new Array(1)).map(() => "black")));
                     room.passIndex = room.words.length + 1;
-                    [room.redMaster, room.bluMaster].forEach((user) => {
+                    [room.redMaster, room.bluMaster, traitors.blu, traitors.red].forEach((user) => {
                         sendMasterKey(user);
                     });
                 },
@@ -478,6 +478,13 @@ function init(wsServer, path) {
                         room.bluMaster = players.shift();
                         room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
                         room.blu = new JSONSet(players);
+                        [...room.blu].forEach((user) => {
+                            sendMasterKey(user);
+                        });
+                        [...room.red].forEach((user) => {
+                            sendMasterKey(user);
+                        });
+                        startGame();
                         update();
                     }
                 },

@@ -29,7 +29,8 @@ class Words extends React.Component {
                          }>
                         <div className="word-box" data-wordIndex={index}>
                             <span>{data.picturesMode ? (
-                                <img src={`pictures/pic${word}.png`}/>) : word && window.hyphenate(word)}</span>
+                                <img
+                                    src={`/codenames/pictures/pic${word}.png`}/>) : word && window.hyphenate(word)}</span>
                             <div className="player-tokens">
                                 {data.playerTokens[index] && data.playerTokens[index].filter(player => player).map(
                                     player => (
@@ -349,7 +350,7 @@ class Game extends React.Component {
             setTimeout(() => {
                 if (!this.wasReleased) {
                     const wordNode = document.querySelector(`[data-wordIndex='${index}']`);
-                    wordNode.querySelector("img").src = `picturesBig/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
+                    wordNode.querySelector("img").src = `/codenames/picturesBig/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
                     wordNode.classList.add("zoomed");
                 }
             }, 250);
@@ -361,7 +362,7 @@ class Game extends React.Component {
             this.wasReleased = true;
             const wordNode = document.querySelector(".zoomed");
             if (wordNode) {
-                wordNode.querySelector("img").src = `pictures/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
+                wordNode.querySelector("img").src = `/codenames/pictures/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
                 document.querySelector(".zoomed").classList.remove("zoomed");
             }
         }
@@ -417,7 +418,8 @@ class Game extends React.Component {
     }
 
     handleClickShuffle() {
-        this.socket.emit("shuffle-players");
+        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?"))
+            this.socket.emit("shuffle-players");
     }
 
     handleClickStart(mode) {
