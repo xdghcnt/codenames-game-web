@@ -16,11 +16,32 @@ function init(wsServer, path) {
     });
     app.use("/codenames", express.static(`${__dirname}/public`));
 
-    const rooms = new Map();
+    const
+        rooms = new Map(),
+        onlineUsers = new Map();
 
     users.on("user-joined", (id, data) => {
-        if (data && data.roomId && !rooms.has(data.roomId))
-            rooms.set(data.roomId, new GameState(id, data, users));
+        if (data.roomId) {
+            if (!rooms.has(data.roomId))
+                rooms.set(data.roomId, new GameState(id, data, users));
+            rooms.get(data.roomId).userJoin(data);
+            onlineUsers.set(data.userId, data.roomId);
+        }
+    });
+    users.on("user-left", (id) => {
+        if (onlineUsers.has(id)) {
+            const roomId = onlineUsers.get(id);
+            if (rooms.has(roomId))
+                rooms.get(roomId).userLeft(id);
+            onlineUsers.delete(id);
+        }
+    });
+    users.on("user-event", (id, event, data) => {
+        if (onlineUsers.has(id)) {
+            const roomId = onlineUsers.get(id);
+            if (rooms.has(roomId))
+                rooms.get(roomId).userEvent(id, event, data);
+        }
     });
 
     class GameState {
@@ -121,7 +142,9 @@ function init(wsServer, path) {
                         .concat(Array.apply(null, new Array(7)).map(() => "white"))
                         .concat(Array.apply(null, new Array(1)).map(() => "black")));
                     room.passIndex = room.words.length + 1;
-                    send(room.onlinePlayers, "masterKeyUpdated");
+                    [room.redMaster, room.bluMaster].forEach((user) => {
+                        sendMasterKey(user);
+                    });
                 },
                 updateCount = () => {
                     room.redCount = masterKey.filter(card => card === "red").length - room.key.filter(card => card === "red").length;
@@ -255,34 +278,47 @@ function init(wsServer, path) {
                 getRandomColor = () => {
                     return "#" + ((1 << 24) * Math.random() | 0).toString(16);
                 },
-                joinUser = (user, data) => {
+                sendMasterKey = (user) => {
+                    if (room.onlinePlayers.has(user)) {
+                        if (room.redMaster === user || room.bluMaster === user)
+                            send(user, "masterKey", masterKey, room.redMaster === user ? traitors.blu : traitors.red);
+                        else if (traitors.blu === user)
+                            send(user, "masterKey", masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
+                        else if (traitors.red === user)
+                            send(user, "masterKey", masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
+                        else
+                            send(user, "masterKey", null);
+                    }
+                },
+                userJoin = (data) => {
+                    const user = data.userId;
                     if (!room.playerNames[user])
                         room.spectators.add(user);
                     room.onlinePlayers.add(user);
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
                     room.playerColors[user] = room.playerColors[user] || getRandomColor();
-                    send(user, "masterKeyUpdated");
+                    sendMasterKey(user);
                     update();
+                },
+                userLeft = (user) => {
+                    room.onlinePlayers.delete(user);
+                    if (room.spectators.has(user))
+                        delete room.playerNames[user];
+                    room.spectators.delete(user);
+                    update();
+                },
+                userEvent = (user, event, data) => {
+                    try {
+                        if (this.eventHandlers[event])
+                            this.eventHandlers[event](user, data[0], data[1], data[2]);
+                    } catch (error) {
+                        console.error(error);
+                        userRegistry.log(error.message);
+                    }
                 };
-            joinUser(hostId, hostData);
-            userRegistry.on("user-joined", (user, data) => {
-                joinUser(user, data);
-            });
-            userRegistry.on("user-left", (user) => {
-                room.onlinePlayers.delete(user);
-                if (room.spectators.has(user))
-                    delete room.playerNames[user];
-                room.spectators.delete(user);
-                update();
-            });
-            userRegistry.on("user-event", (user, eventName, data) => {
-                try {
-                    if (this.eventHandlers[eventName])
-                        this.eventHandlers[eventName](user, data[0], data[1], data[2]);
-                } catch (error) {
-                    console.error(error);
-                }
-            });
+            this.userJoin = userJoin;
+            this.userLeft = userLeft;
+            this.userEvent = userEvent;
             this.eventHandlers = {
                 "word-click": (user, wordIndex) => {
                     if (room.hasCommand && ((room.red.has(user) && room.teamTurn === "red") || (room.blu.has(user) && room.teamTurn === "blu")) && !room.key[wordIndex]) {
@@ -300,16 +336,6 @@ function init(wsServer, path) {
                     }
                     if (room.red.has(user) || room.blu.has(user))
                         send(room.onlinePlayers, "highlight-word", wordIndex, user);
-                },
-                "request-master-key": (user) => {
-                    if (room.redMaster === user || room.bluMaster === user)
-                        send(user, "masterKey", masterKey, room.redMaster === user ? traitors.blu : traitors.red);
-                    else if (traitors.blu === user)
-                        send(user, "masterKey", masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
-                    else if (traitors.red === user)
-                        send(user, "masterKey", masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
-                    else
-                        send(user, "masterKey", null);
                 },
                 "change-color": (user) => {
                     room.playerColors[user] = getRandomColor();
@@ -453,7 +479,6 @@ function init(wsServer, path) {
                         room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
                         room.blu = new JSONSet(players);
                         update();
-                        //io.to(room.roomId).emit("masterKeyUpdated");
                     }
                 },
                 "give-host": (user, playerId) => {
@@ -471,7 +496,7 @@ function init(wsServer, path) {
                             leaveTeams(user);
                             room[`${color}Master`] = user;
                         }
-                        send(user, "masterKeyUpdated");
+                        sendMasterKey(user);
                         update();
                     }
                 },

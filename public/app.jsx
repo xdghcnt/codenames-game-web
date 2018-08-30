@@ -268,7 +268,6 @@ class Game extends React.Component {
                 masterTraitor: traitor
             }));
         });
-        this.socket.on("masterKeyUpdated", () => setTimeout(() => this.socket.emit("request-master-key"), 500));
         this.socket.on("message", text => {
             alert(text);
         });
