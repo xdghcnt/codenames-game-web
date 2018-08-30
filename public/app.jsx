@@ -272,10 +272,11 @@ class Game extends React.Component {
         this.socket.on("message", text => {
             alert(text);
         });
-        this.socket.on("disconnect", () => {
+        window.socket.on("disconnect", (event) => {
             this.setState({
                 inited: false,
-                disconnected: true
+                disconnected: true,
+                disconnectReason: event.reason
             });
         });
         this.socket.on("reload", () => {
@@ -468,7 +469,8 @@ class Game extends React.Component {
     render() {
         clearTimeout(this.timerTimeout);
         if (this.state.disconnected)
-            return (<div className="kicked">Disconnected</div>);
+            return (<div
+                className="kicked">Disconnected{this.state.disconnectReason ? ` (${this.state.disconnectReason})` : ""}</div>);
         else if (this.state.inited) {
             document.body.classList.add("captcha-solved");
             const
