@@ -285,7 +285,7 @@ function init(wsServer, path) {
                             this.eventHandlers[event](user, data[0], data[1], data[2]);
                     } catch (error) {
                         console.error(error);
-                        wsServer.users.log(error.message);
+                        users.registry.log(error.message);
                     }
                 };
             this.userJoin = userJoin;
@@ -489,6 +489,10 @@ function init(wsServer, path) {
                     update();
                 }
             };
+        }
+
+        getPlayerCount() {
+            return Object.keys(this.room.playerNames).length;
         }
     }
 
