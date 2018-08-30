@@ -16,34 +16,6 @@ function init(wsServer, path) {
     });
     app.use("/codenames", express.static(`${__dirname}/public`));
 
-    const
-        rooms = new Map(),
-        onlineUsers = new Map();
-
-    users.on("user-joined", (id, data) => {
-        if (data.roomId) {
-            if (!rooms.has(data.roomId))
-                rooms.set(data.roomId, new GameState(id, data, users));
-            rooms.get(data.roomId).userJoin(data);
-            onlineUsers.set(data.userId, data.roomId);
-        }
-    });
-    users.on("user-left", (id) => {
-        if (onlineUsers.has(id)) {
-            const roomId = onlineUsers.get(id);
-            if (rooms.has(roomId))
-                rooms.get(roomId).userLeft(id);
-            onlineUsers.delete(id);
-        }
-    });
-    users.on("user-event", (id, event, data) => {
-        if (onlineUsers.has(id)) {
-            const roomId = onlineUsers.get(id);
-            if (rooms.has(roomId))
-                rooms.get(roomId).userEvent(id, event, data);
-        }
-    });
-
     class GameState {
         constructor(hostId, hostData, userRegistry) {
             const
@@ -89,8 +61,8 @@ function init(wsServer, path) {
                     wordsLevel: [false, true, true, true]
                 },
                 intervals = {};
+            this.room = room;
             let masterKey, words, pics, traitors = {};
-
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => send(room.onlinePlayers, "state", room),
@@ -534,6 +506,8 @@ function init(wsServer, path) {
             return [...this]
         }
     }
+
+    new users.registry.RoomManager(users, GameState);
 }
 
 module.exports = init;
