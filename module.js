@@ -64,9 +64,13 @@ function init(wsServer, path) {
                 },
                 intervals = {};
             this.room = room;
+            this.lastInteraction = new Date();
             let masterKey, words, pics, traitors = {};
             const
-                send = (target, event, data) => userRegistry.send(target, event, data),
+                send = (target, event, data) => {
+                    this.lastInteraction = new Date();
+                    userRegistry.send(target, event, data);
+                },
                 update = () => send(room.onlinePlayers, "state", room),
                 leaveTeams = (user) => {
                     room.playerTokens = [];
@@ -464,8 +468,8 @@ function init(wsServer, path) {
                 },
                 "give-host": (user, playerId) => {
                     if (playerId && user === room.hostId) {
-                        room.hostId = playerId;
-                        this.emit("host-changed", user, playerId)
+                            room.hostId = playerId;
+                            this.emit("host-changed", user, playerId);
                     }
                     update();
                 },
@@ -497,6 +501,14 @@ function init(wsServer, path) {
 
         getPlayerCount() {
             return Object.keys(this.room.playerNames).length;
+        }
+
+        getActivePlayerCount() {
+            return this.room.onlinePlayers.size;
+        }
+
+        getLastInteraction() {
+            return this.lastInteraction;
         }
     }
 

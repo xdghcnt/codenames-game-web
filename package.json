@@ -9,7 +9,6 @@
     "public"
   ],
   "dependencies": {
-    "ws-server-engine": "git://github.com/xdghcnt/ws-server-engine.git",
-    "express": "^4.16.3"
+    "ws-server-engine": "git://github.com/xdghcnt/ws-server-engine.git"
   }
 }

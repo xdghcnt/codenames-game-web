@@ -248,8 +248,8 @@ class Game extends React.Component {
         if (!location.hash)
             history.replaceState(undefined, undefined, "#" + makeId());
         if (localStorage.acceptDelete) {
-            initArgs.acceptDelete = true;
-            localStorage.acceptDelete = false;
+            initArgs.acceptDelete = localStorage.acceptDelete;
+            delete localStorage.acceptDelete;
         }
         initArgs.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.userId;
@@ -320,11 +320,10 @@ class Game extends React.Component {
             else
                 setTimeout(() => window.location.reload(), 3000)
         });
-        this.socket.on("prompt-delete-prev-room", (roomId) => {
-            if (confirm(`Limit for creating rooms from IP was reached. Delete room ${roomId}?`)) {
-                localStorage.acceptDelete = true;
+        this.socket.on("prompt-delete-prev-room", (roomList) => {
+            if (localStorage.acceptDelete =
+                prompt(`Limit for hosting rooms per IP was reached: ${roomList.join(", ")}. Delete one of rooms?`, roomList[0]))
                 location.reload();
-            }
         });
         document.title = `Codenames - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
