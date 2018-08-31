@@ -3,7 +3,8 @@ function init(wsServer, path) {
         fs = require('fs'),
         express = require('express'),
         app = wsServer.app,
-        users = wsServer.users.of("codenames");
+        users = wsServer.users.of("codenames"),
+        EventEmitter = require("events");
 
     let defaultCodeWords;
     fs.readFile(__dirname + "/words.json", "utf8", function (err, words) {
@@ -16,8 +17,9 @@ function init(wsServer, path) {
     });
     app.use("/codenames", express.static(`${__dirname}/public`));
 
-    class GameState {
+    class GameState extends EventEmitter {
         constructor(hostId, hostData, userRegistry) {
+            super();
             const
                 room = {
                     inited: true,
@@ -461,8 +463,10 @@ function init(wsServer, path) {
                     }
                 },
                 "give-host": (user, playerId) => {
-                    if (playerId && user === room.hostId)
+                    if (playerId && user === room.hostId) {
                         room.hostId = playerId;
+                        this.emit("host-changed", user, playerId)
+                    }
                     update();
                 },
                 "team-join": (user, color, isMaster) => {
