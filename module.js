@@ -3,8 +3,9 @@ function init(wsServer, path) {
         fs = require('fs'),
         express = require('express'),
         app = wsServer.app,
-        users = wsServer.users.of("codenames"),
-        EventEmitter = require("events");
+        registry = wsServer.users,
+        EventEmitter = require("events"),
+        channel = "codenames";
 
     let defaultCodeWords;
     fs.readFile(__dirname + "/words.json", "utf8", function (err, words) {
@@ -65,7 +66,13 @@ function init(wsServer, path) {
                 intervals = {};
             this.room = room;
             this.lastInteraction = new Date();
-            let masterKey, words, pics, traitors = {};
+            const state = {
+                traitors: {},
+                masterKey: null,
+                words: null,
+                pics: null
+            };
+            this.state = state;
             const
                 send = (target, event, data) => {
                     this.lastInteraction = new Date();
@@ -95,48 +102,48 @@ function init(wsServer, path) {
                     room.playerTokens = [];
                 },
                 dealWords = () => {
-                    words = words || [];
-                    pics = pics || [];
+                    state.words = state.words || [];
+                    state.pics = state.pics || [];
                     if (!room.picturesMode) {
-                        if (words.length < 25) {
-                            words = [];
+                        if (state.words.length < 25) {
+                            state.words = [];
                             room.wordsLevel.forEach((value, index) => {
                                 if (value)
-                                    words = words.concat(defaultCodeWords[index])
+                                    state.words = state.words.concat(defaultCodeWords[index])
                             });
-                            shuffleArray(words);
+                            shuffleArray(state.words);
                         }
-                        room.words = words.splice(0, 25);
+                        room.words = state.words.splice(0, 25);
                     } else {
-                        if (pics.length < 25)
-                            pics = shuffleArray(defaultCodePics.slice());
-                        room.words = pics.splice(0, 25);
+                        if (state.pics.length < 25)
+                            state.pics = shuffleArray(defaultCodePics.slice());
+                        room.words = state.pics.splice(0, 25);
                     }
                     room.key = [];
-                    masterKey = shuffleArray([]
+                    state.masterKey = shuffleArray([]
                         .concat(Array.apply(null, new Array(8)).map(() => "red"))
                         .concat(Array.apply(null, new Array(8)).map(() => "blu"))
                         .concat(Array.apply(null, new Array(1)).map(() => (room.teamTurn = (Math.random() >= 0.5 ? "red" : "blu"))))
                         .concat(Array.apply(null, new Array(7)).map(() => "white"))
                         .concat(Array.apply(null, new Array(1)).map(() => "black")));
                     room.passIndex = room.words.length + 1;
-                    [room.redMaster, room.bluMaster, traitors.blu, traitors.red].forEach((user) => {
+                    [room.redMaster, room.bluMaster, state.traitors.blu, state.traitors.red].forEach((user) => {
                         sendMasterKey(user);
                     });
                 },
                 updateCount = () => {
-                    room.redCount = masterKey.filter(card => card === "red").length - room.key.filter(card => card === "red").length;
-                    room.bluCount = masterKey.filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
+                    room.redCount = state.masterKey.filter(card => card === "red").length - room.key.filter(card => card === "red").length;
+                    room.bluCount = state.masterKey.filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
                 },
                 endGame = () => {
                     room.teamsLocked = false;
-                    room.traitors = [traitors.blu, traitors.red];
+                    room.traitors = [state.traitors.blu, state.traitors.red];
                     clearInterval(intervals.team);
                     clearInterval(intervals.move);
                     intervals.team = undefined;
                     room.redTime = 0;
                     room.bluTime = 0;
-                    room.key = masterKey;
+                    room.key = state.masterKey;
                 },
                 startGame = () => {
                     room.paused = false;
@@ -153,7 +160,7 @@ function init(wsServer, path) {
                     clearInterval(intervals.move);
                     clearTimeout(intervals.token);
                     if (room.traitorMode)
-                        traitors = {
+                        state.traitors = {
                             blu: shuffleArray([...room.blu])[0],
                             red: shuffleArray([...room.red])[0]
                         };
@@ -222,14 +229,14 @@ function init(wsServer, path) {
                     }, 100);
                 },
                 chooseWord = (index) => {
-                    if (index === room.passIndex || masterKey[index] !== room.teamTurn) {
+                    if (index === room.passIndex || state.masterKey[index] !== room.teamTurn) {
                         room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
                         room.hasCommand = false;
                         if (room.timed)
                             startMasterTimer();
                     } else room.time += room.addTime * 1000;
                     if (index !== room.passIndex) {
-                        room.key[index] = masterKey[index];
+                        room.key[index] = state.masterKey[index];
                         updateCount();
                         if (room.key[index] === "black" || room.bluCount === 0 || room.redCount === 0) {
                             room.teamWin = room.teamTurn;
@@ -259,11 +266,11 @@ function init(wsServer, path) {
                 sendMasterKey = (user) => {
                     if (room.onlinePlayers.has(user)) {
                         if (room.redMaster === user || room.bluMaster === user)
-                            send(user, "masterKey", masterKey, room.redMaster === user ? traitors.blu : traitors.red);
-                        else if (traitors.blu === user)
-                            send(user, "masterKey", masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
-                        else if (traitors.red === user)
-                            send(user, "masterKey", masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
+                            send(user, "masterKey", state.masterKey, room.redMaster === user ? state.traitors.blu : state.traitors.red);
+                        else if (state.traitors.blu === user)
+                            send(user, "masterKey", state.masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
+                        else if (state.traitors.red === user)
+                            send(user, "masterKey", state.masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
                         else
                             send(user, "masterKey", null);
                     }
@@ -291,7 +298,7 @@ function init(wsServer, path) {
                             this.eventHandlers[event](user, data[0], data[1], data[2]);
                     } catch (error) {
                         console.error(error);
-                        users.registry.log(error.message);
+                        registry.log(error.message);
                     }
                 };
             this.userJoin = userJoin;
@@ -353,7 +360,7 @@ function init(wsServer, path) {
                 },
                 "toggle-words-level": (user, level) => {
                     if (user === room.hostId && ~[0, 1, 2, 3].indexOf(level) && room.wordsLevel.filter((value, index) => index !== level && value).length > 0) {
-                        words = [];
+                        state.words = [];
                         room.wordsLevel[level] = !room.wordsLevel[level];
                     }
                     update();
@@ -468,8 +475,8 @@ function init(wsServer, path) {
                 },
                 "give-host": (user, playerId) => {
                     if (playerId && user === room.hostId) {
-                            room.hostId = playerId;
-                            this.emit("host-changed", user, playerId);
+                        room.hostId = playerId;
+                        this.emit("host-changed", user, playerId);
                     }
                     update();
                 },
@@ -510,6 +517,28 @@ function init(wsServer, path) {
         getLastInteraction() {
             return this.lastInteraction;
         }
+
+        getSnapshot() {
+            return {
+                room: this.room,
+                state: {
+                    traitors: this.state.traitors,
+                    masterKey: this.state.masterKey
+                }
+            };
+        }
+
+        setSnapshot(snapshot) {
+            Object.assign(this.room, snapshot.room);
+            Object.assign(this.state, snapshot.state);
+            this.room.paused = true;
+            this.room.onlinePlayers = new JSONSet(this.room.onlinePlayers);
+            this.room.spectators = new JSONSet(this.room.spectators);
+            this.room.red = new JSONSet(this.room.red);
+            this.room.blu = new JSONSet(this.room.blu);
+            this.room.playerTokens = [];
+            this.room.onlinePlayers.clear();
+        }
     }
 
     function shuffleArray(array) {
@@ -527,7 +556,7 @@ function init(wsServer, path) {
         }
     }
 
-    new users.registry.RoomManager(users, GameState);
+    registry.createRoomManager(path, channel, GameState);
 }
 
 module.exports = init;
