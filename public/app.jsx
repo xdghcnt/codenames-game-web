@@ -263,8 +263,6 @@ class Game extends React.Component {
                 userId: this.userId,
                 masterKey: this.state.masterKey
             }, state));
-            if (!~state.onlinePlayers.indexOf(this.userId))
-                this.socket.emit("ping");
         });
         this.socket.on("masterKey", (masterKey, traitor) => {
             this.setState(Object.assign({}, this.state, {
@@ -324,6 +322,9 @@ class Game extends React.Component {
             if (localStorage.acceptDelete =
                 prompt(`Limit for hosting rooms per IP was reached: ${roomList.join(", ")}. Delete one of rooms?`, roomList[0]))
                 location.reload();
+        });
+        this.socket.on("ping", (id) => {
+            this.socket.emit("pong", id);
         });
         document.title = `Codenames - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);

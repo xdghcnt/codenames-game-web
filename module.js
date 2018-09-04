@@ -498,10 +498,6 @@ function init(wsServer, path) {
                     leaveTeams(user);
                     room.spectators.add(user);
                     update();
-                },
-                "ping": (user) => {
-                    room.onlinePlayers.add(user);
-                    update();
                 }
             };
         }
