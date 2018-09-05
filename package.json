@@ -9,6 +9,7 @@
     "public"
   ],
   "dependencies": {
-    "ws-server-engine": "git://github.com/xdghcnt/ws-server-engine.git"
+    "ws-server-engine": "git://github.com/xdghcnt/ws-server-engine.git",
+    "randomcolor": "0.5.3"
   }
 }

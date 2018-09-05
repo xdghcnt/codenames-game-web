@@ -5,6 +5,7 @@ function init(wsServer, path) {
         app = wsServer.app,
         registry = wsServer.users,
         EventEmitter = require("events"),
+        randomColor = require('randomcolor'),
         channel = "codenames";
 
     let defaultCodeWords;
@@ -260,9 +261,6 @@ function init(wsServer, path) {
                         room.tokenCountdown = null;
                     }
                 },
-                getRandomColor = () => {
-                    return "#" + ((1 << 24) * Math.random() | 0).toString(16);
-                },
                 sendMasterKey = (user) => {
                     if (room.onlinePlayers.has(user)) {
                         if (room.redMaster === user || room.bluMaster === user)
@@ -281,7 +279,7 @@ function init(wsServer, path) {
                         room.spectators.add(user);
                     room.onlinePlayers.add(user);
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
-                    room.playerColors[user] = room.playerColors[user] || getRandomColor();
+                    room.playerColors[user] = room.playerColors[user] || randomColor();
                     sendMasterKey(user);
                     update();
                 },
@@ -323,7 +321,7 @@ function init(wsServer, path) {
                         send(room.onlinePlayers, "highlight-word", wordIndex, user);
                 },
                 "change-color": (user) => {
-                    room.playerColors[user] = getRandomColor();
+                    room.playerColors[user] = randomColor();
                     update();
                 },
                 "toggle-lock": (user) => {
