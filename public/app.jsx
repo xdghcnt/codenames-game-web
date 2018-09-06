@@ -239,11 +239,11 @@ class Game extends React.Component {
         const initArgs = {};
         if (!parseInt(localStorage.darkThemeCodenames))
             document.body.classList.add("dark-theme");
-        if (!localStorage.userId || !localStorage.token) {
+        if (!localStorage.codenamesUserId || !localStorage.codenamesUserToken) {
             while (!localStorage.userName)
                 localStorage.userName = prompt("Your name");
-            localStorage.userId = makeId();
-            localStorage.token = makeId();
+            localStorage.codenamesUserId = makeId();
+            localStorage.codenamesUserToken = makeId();
         }
         if (!location.hash)
             history.replaceState(undefined, undefined, "#" + makeId());
@@ -252,9 +252,9 @@ class Game extends React.Component {
             delete localStorage.acceptDelete;
         }
         initArgs.roomId = location.hash.substr(1);
-        initArgs.userId = this.userId = localStorage.userId;
+        initArgs.userId = this.userId = localStorage.codenamesUserId;
         initArgs.userName = localStorage.userName;
-        initArgs.token = localStorage.token;
+        initArgs.token = localStorage.codenamesUserToken;
         this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
