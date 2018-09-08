@@ -75,10 +75,7 @@ function init(wsServer, path) {
             };
             this.state = state;
             const
-                send = (target, event, data) => {
-                    this.lastInteraction = new Date();
-                    userRegistry.send(target, event, data);
-                },
+                send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => send(room.onlinePlayers, "state", room),
                 leaveTeams = (user) => {
                     room.playerTokens = [];
@@ -144,6 +141,7 @@ function init(wsServer, path) {
                     intervals.team = undefined;
                     room.redTime = 0;
                     room.bluTime = 0;
+                    room.time = null;
                     room.key = state.masterKey;
                 },
                 startGame = () => {
@@ -288,9 +286,15 @@ function init(wsServer, path) {
                     if (room.spectators.has(user))
                         delete room.playerNames[user];
                     room.spectators.delete(user);
+                    if (room.onlinePlayers.size === 0) {
+                        clearInterval(intervals.team);
+                        clearInterval(intervals.move);
+                        room.paused = true;
+                    }
                     update();
                 },
                 userEvent = (user, event, data) => {
+                    this.lastInteraction = new Date();
                     try {
                         if (this.eventHandlers[event])
                             this.eventHandlers[event](user, data[0], data[1], data[2]);
