@@ -188,7 +188,7 @@ body.dark-theme {
     font-weight: bold;
     font-family: 'Roboto Condensed', sans-serif;
     letter-spacing: 0.5px;
-    font-size: 2.9vmin;
+    font-size: 23px;
     align-self: stretch;
     padding: 12px;
 }
@@ -581,6 +581,7 @@ body {
 @media (max-width: 767px) {
     .word {
         padding: 2px;
+        font-size: 2.9vmin;
     }
 
     .team {
