@@ -24,6 +24,7 @@ class Words extends React.Component {
                          onMouseDown={() => handleWordPress(index)}
                          className={
                              "word"
+                             + (!data.teamWin && data.masterKey && data.masterKey[index] !== "none" ? " from-key" : "")
                              + (data.key[index] ? ` word-guessed word-${data.key[index]}` : "")
                              + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
                          }>
@@ -261,14 +262,15 @@ class Game extends React.Component {
                 this.chimeSound.play();
             this.setState(Object.assign({
                 userId: this.userId,
-                masterKey: this.state.masterKey
+                masterKey: this.state.masterKey,
+                masterTraitor: this.state.masterTraitor
             }, state));
         });
-        this.socket.on("masterKey", (masterKey, traitor) => {
+        this.socket.on("masterKey", (data) => {
             this.setState(Object.assign({}, this.state, {
                 userId: this.userId,
-                masterKey: masterKey,
-                masterTraitor: traitor
+                masterKey: data.key,
+                masterTraitor: data.traitor
             }));
         });
         this.socket.on("message", text => {

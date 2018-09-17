@@ -1,4 +1,4 @@
-.dark-theme .game {
+body.dark-theme {
     background: #202020;
 }
 
@@ -132,7 +132,7 @@ body.dark-theme {
     box-shadow: 0 0 0 0 #ff6450;
 }
 
-.isMaster .word-red.word-guessed .word-box {
+.word-red.word-guessed.from-key .word-box {
     color: #ec4732;
 }
 
@@ -146,7 +146,7 @@ body.dark-theme {
     box-shadow: 0 0 0 0 #50bbff;
 }
 
-.isMaster .word-blu.word-guessed .word-box {
+.word-blu.word-guessed.from-key .word-box {
     color: #159ff4;
 }
 
@@ -165,7 +165,7 @@ body.dark-theme {
     box-shadow: 0 0 0 0 #444;
 }
 
-.isMaster .word-guessed {
+.word-guessed.from-key {
     opacity: 0.2;
 }
 
@@ -587,6 +587,7 @@ body {
         flex-grow: 1;
         min-height: 200px;
         order: 0 !important;
+        min-width: 50%;
     }
 
     .words {
@@ -605,6 +606,11 @@ body {
     .cards-count {
         top: -42px;
         right: 5px;
+    }
+
+    .host-controls {
+        top: 0;
+        bottom: auto;
     }
 }
 

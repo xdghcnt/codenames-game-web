@@ -262,13 +262,22 @@ function init(wsServer, path) {
                 sendMasterKey = (user) => {
                     if (room.onlinePlayers.has(user)) {
                         if (room.redMaster === user || room.bluMaster === user)
-                            send(user, "masterKey", state.masterKey, room.redMaster === user ? state.traitors.blu : state.traitors.red);
+                            send(user, "masterKey", {
+                                key: state.masterKey,
+                                traitor: room.redMaster === user ? state.traitors.blu : state.traitors.red
+                            });
                         else if (state.traitors.blu === user)
-                            send(user, "masterKey", state.masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"), user);
+                            send(user, "masterKey", {
+                                key: state.masterKey.map((color) => ~["red", "black"].indexOf(color) ? color : "none"),
+                                traitor: user
+                            });
                         else if (state.traitors.red === user)
-                            send(user, "masterKey", state.masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"), user);
+                            send(user, "masterKey", {
+                                key: state.masterKey.map((color) => ~["blu", "black"].indexOf(color) ? color : "none"),
+                                traitor: user
+                            });
                         else
-                            send(user, "masterKey", null);
+                            send(user, "masterKey", {key: null, traitor: null});
                     }
                 },
                 userJoin = (data) => {
