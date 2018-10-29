@@ -611,25 +611,26 @@ class Game extends React.Component {
                                         {(this.state.engMode ? "EN" : "RU")}
                                     </span> :</span>
                                     <span
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[0] ? " level-selected" : "")}
+                                        className={((isHost && !inProcess && !this.state.engMode) ? " settings-button" : "")
+                                        + (this.state.wordsLevel[0] || this.state.engMode ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(0)}>
                                         Original
                                     </span>
-                                    <span
+                                    {!this.state.engMode ? (<span
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[1] ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(1)}>
                                         Easy
-                                    </span>
-                                    <span
+                                    </span>) : ""}
+                                    {!this.state.engMode ? (<span
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[2] ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(2)}>
                                         Normal
-                                    </span>
-                                    <span
+                                    </span>) : ""}
+                                    {!this.state.engMode ? (<span
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[3] ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(3)}>
                                         Hard
-                                    </span>
+                                    </span>) : ""}
                                 </div>) : ""}
                                 <div className="start-game-buttons">
                                     <div
