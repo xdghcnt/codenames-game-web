@@ -777,7 +777,7 @@ body {
 }
 
 .little-controls.words-level > span {
-    padding: 2px 5px;
+    padding: 2px;
     display: inline-block;
     margin: 4px;
 }
@@ -811,4 +811,16 @@ body {
 .player i {
     position: relative;
     top: -1px;
+}
+
+.words-lang {
+    border: 1px solid;
+    padding: 2px;
+    font-size: 12px;
+    vertical-align: text-bottom;
+}
+
+.words-level-label {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
 }

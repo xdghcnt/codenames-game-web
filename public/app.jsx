@@ -29,9 +29,12 @@ class Words extends React.Component {
                              + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
                          }>
                         <div className="word-box" data-wordIndex={index}>
-                            <span>{data.picturesMode ? (
-                                <img
-                                    src={`/codenames/pictures/pic${word}.png`}/>) : word && window.hyphenate(word)}</span>
+                            <span>{data.picturesMode
+                                ? (<img src={`/codenames/pictures/pic${word}.png`}/>)
+                                : word
+                                && (!data.engModeStarted
+                                    ? window.hyphenate
+                                    : window.hyphenateEn)(word)}</span>
                             <div className="player-tokens">
                                 {data.playerTokens[index] && data.playerTokens[index].filter(player => player).map(
                                     player => (
@@ -337,6 +340,7 @@ class Game extends React.Component {
         this.chimeSound = new Audio("/codenames/chime.mp3");
         this.chimeSound.volume = 0.25;
         window.hyphenate = createHyphenator(hyphenationPatternsRu);
+        window.hyphenateEn = createHyphenator(hyphenationPatternsEnUs);
     }
 
     debouncedEmit(event, data) {
@@ -447,6 +451,10 @@ class Game extends React.Component {
 
     handleToggleWords(level) {
         this.socket.emit("toggle-words-level", level);
+    }
+
+    handleToggleWordsLang() {
+        this.socket.emit("toggle-words-lang");
     }
 
     handleToggleTheme() {
@@ -597,7 +605,11 @@ class Game extends React.Component {
                                         </div>) : ""}
                                 </div>
                                 {!this.state.picturesMode ? (<div className="little-controls words-level">
-                                    <span className="words-level-label">Words level:</span>
+                                    <span className="words-level-label">Words level <span
+                                        className={"words-lang" + ((isHost && !inProcess) ? " settings-button" : "")}
+                                        onClick={() => !inProcess && this.handleToggleWordsLang()}>
+                                        {(this.state.engMode ? "EN" : "RU")}
+                                    </span> :</span>
                                     <span
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[0] ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(0)}>

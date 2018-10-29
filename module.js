@@ -8,9 +8,12 @@ function init(wsServer, path) {
         randomColor = require('randomcolor'),
         channel = "codenames";
 
-    let defaultCodeWords;
+    let defaultCodeWords, engCodeWords;
     fs.readFile(__dirname + "/words.json", "utf8", function (err, words) {
         defaultCodeWords = JSON.parse(words);
+    });
+    fs.readFile(__dirname + "/words-en.json", "utf8", function (err, words) {
+        engCodeWords = JSON.parse(words);
     });
     const defaultCodePics = Array(278).fill().map((_, idx) => idx + 1);
 
@@ -62,7 +65,9 @@ function init(wsServer, path) {
                     traitorMode: false,
                     traitors: [],
                     authRequired: false,
-                    wordsLevel: [false, true, true, true]
+                    wordsLevel: [false, true, true, true],
+                    engMode: false,
+                    engModeStarted: false
                 },
                 intervals = {};
             this.room = room;
@@ -107,7 +112,7 @@ function init(wsServer, path) {
                             state.words = [];
                             room.wordsLevel.forEach((value, index) => {
                                 if (value)
-                                    state.words = state.words.concat(defaultCodeWords[index])
+                                    state.words = !room.engMode ? state.words.concat(defaultCodeWords[index]) : state.words.concat(engCodeWords[0]);
                             });
                             shuffleArray(state.words);
                         }
@@ -125,6 +130,7 @@ function init(wsServer, path) {
                         .concat(Array.apply(null, new Array(7)).map(() => "white"))
                         .concat(Array.apply(null, new Array(1)).map(() => "black")));
                     room.passIndex = room.words.length + 1;
+                    room.engModeStarted = room.engMode;
                     [room.redMaster, room.bluMaster, state.traitors.blu, state.traitors.red].forEach((user) => {
                         sendMasterKey(user);
                     });
@@ -376,6 +382,13 @@ function init(wsServer, path) {
                     }
                     update();
                 },
+                "toggle-words-lang": (user) => {
+                    if (user === room.hostId) {
+                        state.words = [];
+                        room.engMode = !room.engMode;
+                    }
+                    update();
+                },
                 "toggle-traitor-mode": (user) => {
                     if (user === room.hostId)
                         room.traitorMode = !room.traitorMode;
@@ -549,7 +562,14 @@ function init(wsServer, path) {
     }
 
     function shuffleArray(array) {
-        array.sort(() => (Math.random() - 0.5));
+        let currentIndex = array.length, temporaryValue, randomIndex;
+        while (0 !== currentIndex) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex -= 1;
+            temporaryValue = array[currentIndex];
+            array[currentIndex] = array[randomIndex];
+            array[randomIndex] = temporaryValue;
+        }
         return array;
     }
 
