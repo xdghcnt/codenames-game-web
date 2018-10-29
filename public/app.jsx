@@ -613,7 +613,7 @@ class Game extends React.Component {
                                     <span
                                         className={((isHost && !inProcess && !this.state.engMode) ? " settings-button" : "")
                                         + (this.state.wordsLevel[0] || this.state.engMode ? " level-selected" : "")}
-                                        onClick={() => !inProcess && this.handleToggleWords(0)}>
+                                        onClick={() => !this.state.engMode && !inProcess && this.handleToggleWords(0)}>
                                         Original
                                     </span>
                                     {!this.state.engMode ? (<span
