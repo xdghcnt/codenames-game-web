@@ -6,6 +6,7 @@
   "files": [
     "module.js",
     "words.json",
+    "words-en.json",
     "public"
   ],
   "dependencies": {
