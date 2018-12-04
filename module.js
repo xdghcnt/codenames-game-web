@@ -221,8 +221,7 @@ function init(wsServer, path) {
                                     const word = {index: index, votes: players.size};
                                     usedTokens += players.size;
                                     if (index === room.passIndex)
-                                        word.votes += [...room[room.teamTurn]]
-                                            .filter(player => room.onlinePlayers.has(player)).length - usedTokens;
+                                        word.votes += [...room[room.teamTurn]].length - usedTokens;
                                     votedWords.push(word);
                                 });
                                 const
@@ -254,7 +253,7 @@ function init(wsServer, path) {
                     send(room.onlinePlayers, "highlight-word", index);
                 },
                 tokenChanged = (index) => {
-                    if ([...room[room.teamTurn]].filter((player => room.onlinePlayers.has(player))).length === (room.playerTokens[index] && room.playerTokens[index].size)) {
+                    if ([...room[room.teamTurn]].length === (room.playerTokens[index] && room.playerTokens[index].size)) {
                         intervals.token = setTimeout(() => {
                             chooseWord(index);
                         }, room.tokenDelay);
