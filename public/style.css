@@ -955,3 +955,7 @@ body {
     margin-right: 0 !important;
     padding-right: 0 !important;
 }
+
+.tri-mode .traitor-button {
+    display: none;
+}

@@ -424,6 +424,7 @@ function init(wsServer, path) {
                     if (user === room.hostId) {
                         room.bigMode = true;
                         room.triMode = true;
+                        room.traitorMode = false;
                         startGame();
                         update();
                     }
