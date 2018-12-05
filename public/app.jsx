@@ -294,7 +294,7 @@ class Game extends React.Component {
             if (wordNode) {
                 if (!parseInt(localStorage.muteSounds)) {
                     const
-                        volR = (wordIndex % 5) / 4,
+                        volR = (wordIndex % (this.state.bigMode ? 6 : 5)) / (this.state.bigMode ? 5 : 4),
                         volL = 1 - volR;
                     this.tapSoundL.volume = Math.max(volL, 0.2) * 0.3;
                     this.tapSoundR.volume = Math.max(volR, 0.2) * 0.3;
