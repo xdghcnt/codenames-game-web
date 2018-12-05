@@ -35,22 +35,28 @@ function init(wsServer, path) {
                     onlinePlayers: new JSONSet(),
                     red: new JSONSet(),
                     blu: new JSONSet(),
+                    grn: new JSONSet(),
                     key: [],
                     words: [],
                     redMaster: null,
                     bluMaster: null,
+                    grnMaster: null,
                     redCommands: [],
                     bluCommands: [],
+                    grnCommands: [],
                     redCount: null,
                     bluCount: null,
+                    grnCount: null,
                     teamsLocked: false,
                     teamWin: null,
+                    teamFailed: null,
                     teamTurn: null,
                     playerTokens: [],
                     tokenCountdown: null,
                     hasCommand: false,
                     redTime: 0,
                     bluTime: 0,
+                    grnTime: 0,
                     timed: true,
                     masterTime: 60,
                     masterFirstTime: 0,
@@ -61,13 +67,15 @@ function init(wsServer, path) {
                     masterAdditionalTime: false,
                     passIndex: null,
                     paused: false,
-                    picturesMode: false,
                     traitorMode: false,
                     traitors: [],
                     authRequired: false,
                     wordsLevel: [false, true, true, true],
-                    engMode: false,
-                    engModeStarted: false
+                    mode: "ru",
+                    modeStarted: "ru",
+                    turnOrder: [],
+                    bigMode: false,
+                    triMode: false
                 },
                 intervals = {};
             this.room = room;
@@ -86,12 +94,25 @@ function init(wsServer, path) {
                     room.playerTokens = [];
                     room.red.delete(user);
                     room.blu.delete(user);
+                    room.grn.delete(user);
                     room.spectators.delete(user);
                     if (room.redMaster === user)
                         room.redMaster = null;
                     else if (room.bluMaster === user)
                         room.bluMaster = null;
-                    send(user, "masterKey", null);
+                    else if (room.grnMaster === user)
+                        room.grnMaster = null;
+                    send(user, "masterKey", {key: null, traitor: null});
+                },
+                joinSpectators = (user) => {
+                    if (user) {
+                        leaveTeams(user);
+                        room.spectators.add(user);
+                    }
+                },
+                clearGrnTeam = () => {
+                    [...room.grn].forEach(joinSpectators);
+                    joinSpectators(room.grnMaster);
                 },
                 removePlayer = (playerId) => {
                     room.onlinePlayers.delete(playerId);
@@ -102,42 +123,49 @@ function init(wsServer, path) {
                         room.bluMaster = null;
                     else if (room.redMaster === playerId)
                         room.redMaster = null;
+                    else if (room.grnMaster === playerId)
+                        room.grnMaster = null;
                     room.playerTokens = [];
                 },
                 dealWords = () => {
                     state.words = state.words || [];
                     state.pics = state.pics || [];
-                    if (!room.picturesMode) {
-                        if (state.words.length < 25) {
+                    const wordsCount = room.bigMode ? 36 : 25;
+                    if (room.mode !== "pic") {
+                        if (state.words.length < wordsCount) {
                             state.words = [];
                             room.wordsLevel.forEach((value, index) => {
                                 if (value)
-                                    state.words = !room.engMode ? state.words.concat(defaultCodeWords[index]) : state.words.concat(engCodeWords[0]);
+                                    state.words = room.mode !== "en" ? state.words.concat(defaultCodeWords[index]) : state.words.concat(engCodeWords[0]);
                             });
                             shuffleArray(state.words);
                         }
-                        room.words = state.words.splice(0, 25);
+                        room.words = state.words.splice(0, wordsCount);
                     } else {
-                        if (state.pics.length < 25)
+                        if (state.pics.length < wordsCount)
                             state.pics = shuffleArray(defaultCodePics.slice());
-                        room.words = state.pics.splice(0, 25);
+                        room.words = state.pics.splice(0, wordsCount);
                     }
                     room.key = [];
+                    room.turnOrder = shuffleArray(room.triMode ? ["red", "blu", "grn"] : ["red", "blu"]);
                     state.masterKey = shuffleArray([]
-                        .concat(Array.apply(null, new Array(8)).map(() => "red"))
-                        .concat(Array.apply(null, new Array(8)).map(() => "blu"))
-                        .concat(Array.apply(null, new Array(1)).map(() => (room.teamTurn = (Math.random() >= 0.5 ? "red" : "blu"))))
-                        .concat(Array.apply(null, new Array(7)).map(() => "white"))
+                        .concat(Array.apply(null, new Array(!room.bigMode ? 8 : (room.triMode ? 8 : 11))).map(() => "red"))
+                        .concat(Array.apply(null, new Array(!room.bigMode ? 8 : (room.triMode ? 8 : 11))).map(() => "blu"))
+                        .concat(Array.apply(null, new Array(room.triMode ? 8 : 0)).map(() => "grn"))
+                        .concat(Array.apply(null, new Array(room.triMode ? 2 : 1)).map(() => (room.teamTurn = room.turnOrder[0])))
+                        .concat(Array.apply(null, new Array(room.triMode ? 1 : 0)).map(() => (room.turnOrder[1])))
+                        .concat(Array.apply(null, new Array(!room.bigMode ? 7 : (room.triMode ? 8 : 12))).map(() => "white"))
                         .concat(Array.apply(null, new Array(1)).map(() => "black")));
                     room.passIndex = room.words.length + 1;
-                    room.engModeStarted = room.engMode;
-                    [room.redMaster, room.bluMaster, state.traitors.blu, state.traitors.red].forEach((user) => {
+                    room.modeStarted = room.mode;
+                    [room.redMaster, room.bluMaster, room.grnMaster, state.traitors.blu, state.traitors.red].forEach((user) => {
                         sendMasterKey(user);
                     });
                 },
                 updateCount = () => {
                     room.redCount = state.masterKey.filter(card => card === "red").length - room.key.filter(card => card === "red").length;
                     room.bluCount = state.masterKey.filter(card => card === "blu").length - room.key.filter(card => card === "blu").length;
+                    room.grnCount = state.masterKey.filter(card => card === "grn").length - room.key.filter(card => card === "grn").length;
                 },
                 endGame = () => {
                     room.teamsLocked = false;
@@ -147,14 +175,17 @@ function init(wsServer, path) {
                     intervals.team = undefined;
                     room.redTime = 0;
                     room.bluTime = 0;
+                    room.grnTime = 0;
                     room.time = null;
                     room.key = state.masterKey;
                 },
                 startGame = () => {
                     room.paused = false;
                     room.teamsLocked = true;
+                    room.teamFailed = null;
                     room.redCommands = [];
                     room.bluCommands = [];
+                    room.grnCommands = [];
                     room.playerTokens = [];
                     room.traitors = [];
                     room.teamWin = null;
@@ -232,9 +263,21 @@ function init(wsServer, path) {
                         } else time = new Date();
                     }, 100);
                 },
+                getNextTeam = () => {
+                    let nextTeam = room.turnOrder.indexOf(room.teamTurn) + 1;
+                    if (!room.turnOrder[nextTeam])
+                        nextTeam = 0;
+                    if (room.teamFailed === room.turnOrder[nextTeam])
+                        nextTeam++;
+                    if (!room.turnOrder[nextTeam])
+                        nextTeam = 0;
+                    return room.turnOrder[nextTeam];
+                },
                 chooseWord = (index) => {
                     if (index === room.passIndex || state.masterKey[index] !== room.teamTurn) {
-                        room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+                        if (room.triMode && state.masterKey[index] === "black")
+                            room.teamFailed = room.teamTurn;
+                        room.teamTurn = getNextTeam();
                         room.hasCommand = false;
                         if (room.timed)
                             startMasterTimer();
@@ -242,8 +285,18 @@ function init(wsServer, path) {
                     if (index !== room.passIndex) {
                         room.key[index] = state.masterKey[index];
                         updateCount();
-                        if (room.key[index] === "black" || room.bluCount === 0 || room.redCount === 0) {
-                            room.teamWin = room.teamTurn;
+                        if ((room.key[index] === "black" && !room.triMode)
+                            || room.bluCount === 0 || room.redCount === 0 || (room.triMode && room.grnCount === 0)) {
+                            if (!room.triMode)
+                                room.teamWin = room.teamTurn;
+                            else {
+                                if (room.redCount === 0)
+                                    room.teamWin = "red";
+                                else if (room.bluCount === 0)
+                                    room.teamWin = "blu";
+                                else if (room.grnCount === 0)
+                                    room.teamWin = "grn";
+                            }
                             endGame();
                         }
                     }
@@ -266,7 +319,7 @@ function init(wsServer, path) {
                 },
                 sendMasterKey = (user) => {
                     if (room.onlinePlayers.has(user)) {
-                        if (room.redMaster === user || room.bluMaster === user)
+                        if (room.redMaster === user || room.bluMaster === user || room.grnMaster === user)
                             send(user, "masterKey", {
                                 key: state.masterKey,
                                 traitor: room.redMaster === user ? state.traitors.blu : state.traitors.red
@@ -322,7 +375,9 @@ function init(wsServer, path) {
             this.userEvent = userEvent;
             this.eventHandlers = {
                 "word-click": (user, wordIndex) => {
-                    if (room.hasCommand && ((room.red.has(user) && room.teamTurn === "red") || (room.blu.has(user) && room.teamTurn === "blu")) && !room.key[wordIndex]) {
+                    if (room.hasCommand && ((room.red.has(user) && room.teamTurn === "red")
+                        || (room.blu.has(user) && room.teamTurn === "blu")
+                        || (room.grn.has(user) && room.teamTurn === "grn")) && !room.key[wordIndex]) {
                         room.playerTokens[wordIndex] = room.playerTokens[wordIndex] || new JSONSet();
                         [...room.playerTokens].forEach(
                             (players, index) => index !== wordIndex
@@ -335,7 +390,7 @@ function init(wsServer, path) {
                         tokenChanged(wordIndex);
                         update();
                     }
-                    if (room.red.has(user) || room.blu.has(user))
+                    if (room.red.has(user) || room.blu.has(user) || room.grn.has(user))
                         send(room.onlinePlayers, "highlight-word", wordIndex, user);
                 },
                 "change-color": (user) => {
@@ -349,27 +404,26 @@ function init(wsServer, path) {
                 },
                 "start-game": (user) => {
                     if (user === room.hostId) {
-                        room.picturesMode = false;
-                        room.timed = false;
-                        room.tokenDelay = 3000;
+                        room.bigMode = false;
+                        room.triMode = false;
+                        clearGrnTeam();
                         startGame();
                         update();
                     }
                 },
-                "start-game-timed": (user) => {
+                "start-game-big": (user) => {
                     if (user === room.hostId) {
-                        room.picturesMode = false;
-                        room.timed = true;
-                        room.tokenDelay = 1500;
+                        room.bigMode = true;
+                        room.triMode = false;
+                        clearGrnTeam();
                         startGame();
                         update();
                     }
                 },
-                "start-game-pictures": (user) => {
+                "start-game-tri": (user) => {
                     if (user === room.hostId) {
-                        room.picturesMode = true;
-                        room.timed = true;
-                        room.tokenDelay = 1500;
+                        room.bigMode = true;
+                        room.triMode = true;
                         startGame();
                         update();
                     }
@@ -381,10 +435,15 @@ function init(wsServer, path) {
                     }
                     update();
                 },
-                "toggle-words-lang": (user) => {
+                "toggle-words-mode": (user) => {
                     if (user === room.hostId) {
                         state.words = [];
-                        room.engMode = !room.engMode;
+                        let
+                            modeList = ["ru", "en", "pic"],
+                            nextMode = modeList.indexOf(room.mode) + 1;
+                        if (!modeList[nextMode])
+                            nextMode = 0;
+                        room.mode = modeList[nextMode];
                     }
                     update();
                 },
@@ -444,7 +503,7 @@ function init(wsServer, path) {
                 },
                 "skip-team": (user) => {
                     if (user === room.hostId) {
-                        room.teamTurn = room.teamTurn !== "red" ? "red" : "blu";
+                        room.teamTurn = getNextTeam();
                         room.hasCommand = false;
                         room.masterAdditionalTime = false;
                         startTeamTimer();
@@ -477,19 +536,33 @@ function init(wsServer, path) {
                         let players = [];
                         players = players.concat([...room.red]);
                         players = players.concat([...room.blu]);
+                        players = players.concat([...room.grn]);
                         if (room.redMaster)
                             players.push(room.redMaster);
                         if (room.bluMaster)
                             players.push(room.bluMaster);
+                        if (room.grnMaster)
+                            players.push(room.grnMaster);
                         shuffleArray(players);
                         room.redMaster = players.shift();
                         room.bluMaster = players.shift();
-                        room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
-                        room.blu = new JSONSet(players);
+                        if (room.triMode)
+                            room.grnMaster = players.shift();
+                        if (!room.triMode) {
+                            room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
+                            room.blu = new JSONSet(players);
+                        } else {
+                            room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 3)));
+                            room.blu = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
+                            room.grn = new JSONSet(players);
+                        }
                         [...room.blu].forEach((user) => {
                             sendMasterKey(user);
                         });
                         [...room.red].forEach((user) => {
+                            sendMasterKey(user);
+                        });
+                        [...room.grn].forEach((user) => {
                             sendMasterKey(user);
                         });
                         startGame();
@@ -504,7 +577,7 @@ function init(wsServer, path) {
                     update();
                 },
                 "team-join": (user, color, isMaster) => {
-                    if (color === "red" || color === "blu") {
+                    if (color === "red" || color === "blu" || (room.triMode && color === "grn")) {
                         if (!isMaster) {
                             leaveTeams(user);
                             room[color].add(user)
@@ -518,8 +591,7 @@ function init(wsServer, path) {
                     }
                 },
                 "spectators-join": (user) => {
-                    leaveTeams(user);
-                    room.spectators.add(user);
+                    joinSpectators(user);
                     update();
                 }
             };
@@ -555,6 +627,7 @@ function init(wsServer, path) {
             this.room.spectators = new JSONSet(this.room.spectators);
             this.room.red = new JSONSet(this.room.red);
             this.room.blu = new JSONSet(this.room.blu);
+            this.room.grn = new JSONSet(this.room.grn);
             this.room.playerTokens = [];
             this.room.onlinePlayers.clear();
         }

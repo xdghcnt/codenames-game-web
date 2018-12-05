@@ -29,10 +29,10 @@ class Words extends React.Component {
                              + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
                          }>
                         <div className="word-box" data-wordIndex={index}>
-                            <span>{data.picturesMode
+                            <span>{data.modeStarted === "pic"
                                 ? (<img src={`/codenames/pictures/pic${word}.png`}/>)
                                 : word
-                                && (!data.engModeStarted
+                                && (data.modeStarted === "ru"
                                     ? window.hyphenate
                                     : window.hyphenateEn)(word)}</span>
                             <div className="player-tokens">
@@ -69,7 +69,7 @@ class Team extends React.Component {
             timeWarning = time !== 0 && time < 6000,
             isTeamTurn = data.teamTurn === color;
         return (
-            <div className={`team ${color}`}>
+            <div className={`team ${color} ${data.teamFailed === color ? "failed" : ""}`}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
                     {data.teamTurn === color ? (<span className={
                         "move-arrow"
@@ -100,7 +100,7 @@ class Team extends React.Component {
                         )}
                 </div>
                 {data[`${color}Count`] !== null ? (
-                    <div className="cards-count">
+                    <div className={"cards-count" + (data[`${color}Count`] > 9 ? " big-number" : "")}>
                         {data[`${color}Count`]}
                     </div>
                 ) : ""}
@@ -133,7 +133,7 @@ class Team extends React.Component {
                         }
                     </div>
                 ) : ""}
-                {!data.hasCommand && data.userId === master && data.teamTurn === color ? (
+                {!data.hasCommand && data.userId === master && data.teamTurn === color && data.teamWin === null ? (
                     <div className="add-command">
                         <input className="add-command-input" id="command-input"
                                onKeyDown={(evt) => evt.key === "Enter" && handleAddCommandClick(color)}/>
@@ -362,7 +362,7 @@ class Game extends React.Component {
     }
 
     handleWordPress(index) {
-        if (this.state.picturesMode) {
+        if (this.state.modeStarted === "pic") {
             this.wasReleased = false;
             setTimeout(() => {
                 if (!this.wasReleased) {
@@ -375,7 +375,7 @@ class Game extends React.Component {
     }
 
     handleWordRelease() {
-        if (this.state.picturesMode) {
+        if (this.state.modeStarted === "pic") {
             this.wasReleased = true;
             const wordNode = document.querySelector(".zoomed");
             if (wordNode) {
@@ -453,8 +453,8 @@ class Game extends React.Component {
         this.socket.emit("toggle-words-level", level);
     }
 
-    handleToggleWordsLang() {
-        this.socket.emit("toggle-words-lang");
+    handleToggleWordsMode() {
+        this.socket.emit("toggle-words-mode");
     }
 
     handleToggleTheme() {
@@ -496,10 +496,10 @@ class Game extends React.Component {
             const
                 data = this.state,
                 isHost = data.hostId === data.userId,
-                isMaster = data.bluMaster === data.userId || data.redMaster === data.userId,
+                isMaster = data.bluMaster === data.userId || data.redMaster === data.userId || data.grnMaster === data.userId,
                 inProcess = data.words.length > 0 && data.teamWin === null && !data.paused,
                 parentDir = location.pathname.match(/(.+?)\//)[1];
-            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || (data.masterFirstTime !== 0 && data.words.length)) && !data.teamWin) {
+            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || data.grnCommands.length !== 0 || (data.masterFirstTime !== 0 && data.words.length)) && !data.teamWin) {
                 let timeStart = new Date();
                 this.timerTimeout = setTimeout(() => {
                     if (!this.state.paused) {
@@ -518,7 +518,9 @@ class Game extends React.Component {
                     "game"
                     + (this.state.teamWin ? ` ${this.state.teamWin}-win` : "")
                     + (this.state.timed ? " timed" : "")
-                    + (this.state.picturesMode ? " pictures" : "")}
+                    + (this.state.bigMode ? " big-mode" : "")
+                    + (this.state.triMode ? " tri-mode" : "")
+                    + (this.state.modeStarted === "pic" ? " pictures" : "")}
                      onMouseUp={() => this.handleWordRelease()}>
                     <div className={
                         "game-board"
@@ -527,7 +529,7 @@ class Game extends React.Component {
                         + (data.teamsLocked ? " teamsLocked" : "")
                     }>
                         <div className="main-row">
-                            {["red", "blu"].map(color => (
+                            {(!data.triMode ? ["red", "blu"] : ["red", "blu", "grn"]).map(color => (
                                 <Team
                                     color={color}
                                     data={data}
@@ -604,49 +606,49 @@ class Game extends React.Component {
                                             className="material-icons">casino</i>
                                         </div>) : ""}
                                 </div>
-                                {!this.state.picturesMode ? (<div className="little-controls words-level">
-                                    <span className="words-level-label">Words level <span
+                                <div className="little-controls words-level">
+                                    <span className="words-level-label">Cards <span
                                         className={"words-lang" + ((isHost && !inProcess) ? " settings-button" : "")}
-                                        onClick={() => !inProcess && this.handleToggleWordsLang()}>
-                                        {(this.state.engMode ? "EN" : "RU")}
+                                        onClick={() => !inProcess && this.handleToggleWordsMode()}>
+                                        {this.state.mode.toUpperCase()}
                                     </span> :</span>
                                     <span
-                                        className={((isHost && !inProcess && !this.state.engMode) ? " settings-button" : "")
-                                        + (this.state.wordsLevel[0] || this.state.engMode ? " level-selected" : "")}
-                                        onClick={() => !this.state.engMode && !inProcess && this.handleToggleWords(0)}>
+                                        className={((isHost && !inProcess && this.state.mode === "ru") ? " settings-button" : "")
+                                        + (this.state.wordsLevel[0] || this.state.mode !== "ru" ? " level-selected" : "")}
+                                        onClick={() => this.state.mode === "ru" && !inProcess && this.handleToggleWords(0)}>
                                         Original
                                     </span>
-                                    {!this.state.engMode ? (<span
+                                    {this.state.mode === "ru" ? (<span
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[1] ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(1)}>
                                         Easy
                                     </span>) : ""}
-                                    {!this.state.engMode ? (<span
+                                    {this.state.mode === "ru" ? (<span
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[2] ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(2)}>
                                         Normal
                                     </span>) : ""}
-                                    {!this.state.engMode ? (<span
+                                    {this.state.mode === "ru" ? (<span
                                         className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[3] ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleToggleWords(3)}>
                                         Hard
                                     </span>) : ""}
-                                </div>) : ""}
+                                </div>
                                 <div className="start-game-buttons">
                                     <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (!this.state.timed ? " level-selected" : "")}
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + ((!this.state.bigMode && !this.state.triMode) ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleClickStart("start-game")}><i
-                                        className="material-icons">all_inclusive</i>Timeless
-                                    </div>
-                                    <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.timed && !this.state.picturesMode ? " level-selected" : "")}
-                                        onClick={() => !inProcess && this.handleClickStart("start-game-timed")}><i
                                         className="material-icons">alarm</i>Normal
                                     </div>
                                     <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.picturesMode ? " level-selected" : "")}
-                                        onClick={() => !inProcess && this.handleClickStart("start-game-pictures")}><i
-                                        className="material-icons">photo</i>Pictures
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.bigMode && !this.state.triMode ? " level-selected" : "")}
+                                        onClick={() => !inProcess && this.handleClickStart("start-game-big")}><i
+                                        className="material-icons">zoom_out_map</i>Extended
+                                    </div>
+                                    <div
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.triMode ? " level-selected" : "")}
+                                        onClick={() => !inProcess && this.handleClickStart("start-game-tri")}><i
+                                        className="material-icons">person_add</i>3 Teams
                                     </div>
                                 </div>
                             </div>

@@ -10,6 +10,10 @@ body.dark-theme {
     background: linear-gradient(to right, #202020 0%, #043a5d 100%);
 }
 
+.dark-theme .game.grn-win {
+    background: linear-gradient(to right, #202020 0%, #2b5d09 100%);
+}
+
 .dark-theme .word-box {
     background: rgba(222, 197, 179, 0.81);
 }
@@ -150,6 +154,20 @@ body.dark-theme {
     color: #159ff4;
 }
 
+.word-grn .word-box {
+    background: #bcef86;
+    color: #05800a;
+    box-shadow: 0 0 0 20px rgba(178, 255, 80, 0);
+}
+
+.word-grn .word-box.highlight-anim {
+    box-shadow: 0 0 0 0 #bcef86;
+}
+
+.word-grn.word-guessed.from-key .word-box {
+    color: #05800a;
+}
+
 .word-white .word-box {
     color: #9a978c;
     background: #fffcf5;
@@ -175,6 +193,7 @@ body.dark-theme {
     flex-wrap: wrap;
     align-items: stretch;
     max-width: 910px;
+    margin: auto;
 }
 
 .word {
@@ -191,6 +210,14 @@ body.dark-theme {
     font-size: 23px;
     align-self: stretch;
     padding: 12px;
+}
+
+.big-mode .word {
+    flex: 1 0 16%;
+    min-width: 16%;
+    min-height: 16%;
+    font-size: 20px;
+    padding: 9px;
 }
 
 .word-box {
@@ -243,6 +270,10 @@ body.dark-theme {
     height: 100%;
 }
 
+.add-command {
+    z-index: 1;
+}
+
 .add-command-button {
     font-size: 42px;
     font-weight: bold;
@@ -252,8 +283,16 @@ body.dark-theme {
     z-index: 1;
 }
 
+.team.failed {
+    filter: saturate(0);
+}
+
 .team.red .add-command-button {
     color: #ff6450;
+}
+
+.team.grn .add-command-button {
+    color: #bcef86;
 }
 
 #command-input {
@@ -266,6 +305,10 @@ body.dark-theme {
 
 .team.red #command-input {
     border: 1px solid #ff6450;
+}
+
+.team.grn #command-input {
+    border: 1px solid #bcef86;
 }
 
 .commands-title {
@@ -286,6 +329,9 @@ body.dark-theme {
     color: #50bbff;
     user-select: none;
     z-index: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
 }
 
 .team.red {
@@ -300,6 +346,12 @@ body.dark-theme {
 
 .team.red .cards-count {
     color: #ff6450;
+    margin-left: 6px;
+}
+
+.team.grn .cards-count {
+    color: #bcef86;
+    margin-left: 6px;
 }
 
 .team.blu {
@@ -314,10 +366,25 @@ body.dark-theme {
 
 .team.blu .cards-count {
     color: #50bbff;
+    margin-right: 6px;
+}
+
+.team.grn {
+    border-right: #bcef86 2px solid;
+    background: rgba(178, 255, 80, 0.1);
+    order: 4;
+}
+
+.team.grn .add-command {
+    color: #bcef86;
+}
+
+.team.grn .cards-count {
+    color: #bcef86;
 }
 
 .team {
-    width: 138px;
+    width: 140px;
     box-sizing: border-box;
     padding: 9px;
     display: flex;
@@ -389,6 +456,10 @@ body.dark-theme {
     background: #50bbff;
 }
 
+.token-countdown.grn {
+    background: #bcef86;
+}
+
 .token-countdown.active {
     width: 100%;
     transition-property: width;
@@ -400,6 +471,10 @@ body.dark-theme {
 
 .isMaster .word-blu .token-countdown.blu {
     background: #3a79ff;
+}
+
+.isMaster .word-grn .token-countdown.grn {
+    background: #6dff4f;
 }
 
 .pass-button {
@@ -421,11 +496,15 @@ body.dark-theme {
     background: linear-gradient(to right, rgb(244, 236, 236) 0%, #a8b4ff 100%);
 }
 
+.game.grn-win {
+    background: linear-gradient(to right, rgb(244, 236, 236) 0%, #85ff64 100%);
+}
+
 .master .player {
     display: inline-block;
 }
 
-.red-win .isMaster .word-guessed, .blu-win .isMaster {
+.red-win .isMaster .word-guessed, .blu-win .isMaster, .grn-win .isMaster {
     opacity: 1;
 }
 
@@ -452,6 +531,7 @@ body.dark-theme {
 .move-arrow {
     display: inline-block;
     margin-right: 4px;
+    margin-top: -2px;
 }
 
 .move-arrow.has-command {
@@ -583,11 +663,14 @@ body {
         font-size: 2.9vmin;
     }
 
+    .big-mode .word {
+        font-size: 2.5vmin;
+    }
+
     .team {
         flex-grow: 1;
         min-height: 200px;
         order: 0 !important;
-        min-width: 50%;
     }
 
     .words {
@@ -611,6 +694,54 @@ body {
     .host-controls {
         top: 0;
         bottom: auto;
+    }
+}
+
+@media (max-width: 1110px) {
+    .big-mode .word {
+        padding: 2px;
+        font-size: 2.9vmin;
+    }
+
+    .big-mode .word {
+        font-size: 2.5vmin;
+    }
+
+    .big-mode .team {
+        flex-grow: 1;
+        min-height: 200px;
+        order: 0 !important;
+    }
+
+    .big-mode .words {
+        flex: auto;
+        max-width: initial;
+    }
+
+    .big-mode .game-board {
+        justify-content: flex-start;
+    }
+
+    .big-mode .main-row {
+        max-height: 520px;
+        flex-flow: wrap;
+    }
+
+    .big-mode .cards-count {
+        top: -42px;
+        right: 5px;
+    }
+
+    .big-mode .host-controls {
+        top: 0;
+        bottom: auto;
+    }
+}
+
+@media (min-width: 1110px) {
+    .cards-count.big-number {
+        font-size: 119px;
+        transform: scaleY(1.86) translateY(-30px);
     }
 }
 
@@ -675,6 +806,7 @@ body {
 .start-game-buttons i, .custom-game-button i {
     vertical-align: bottom;
     margin-right: 3px;
+    margin-bottom: -2px;
 }
 
 .little-controls i {
