@@ -263,17 +263,24 @@ class Game extends React.Component {
         this.socket.on("state", state => {
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
                 this.chimeSound.play();
+            if (!this.state || !this.state.paused && state.cardSet && state.paused)
+                this.setCustomConfig();
+            else if (this.state && this.state.paused && state.cardSet && !state.paused)
+                this.customConfig = false;
             this.setState(Object.assign({
-                userId: this.userId,
-                masterKey: this.state.masterKey,
-                masterTraitor: this.state.masterTraitor
-            }, state));
+                    userId: this.userId,
+                    masterKey: this.state.masterKey,
+                    masterTraitor: this.state.masterTraitor,
+                    customConfig: this.customConfig
+                }, state),
+                () => this.customConfig && this.configureCardSetInputs());
         });
         this.socket.on("masterKey", (data) => {
             this.setState(Object.assign({}, this.state, {
                 userId: this.userId,
                 masterKey: data.key,
-                masterTraitor: data.traitor
+                masterTraitor: data.traitor,
+                customConfig: this.customConfig
             }));
         });
         this.socket.on("message", text => {
@@ -440,13 +447,19 @@ class Game extends React.Component {
     }
 
     handleClickStart(mode) {
-        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?"))
+        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?")) {
+            this.customConfig = null;
             this.socket.emit(mode);
+        }
     }
 
     handleClickRestart() {
-        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?"))
-            this.socket.emit("restart-game");
+        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?")) {
+            if (this.customConfig)
+                this.socket.emit("start-game-custom", this.customConfig);
+            else
+                this.socket.emit("restart-game");
+        }
     }
 
     handleToggleWords(level) {
@@ -468,14 +481,86 @@ class Game extends React.Component {
 
     handleToggleMuteSounds() {
         localStorage.muteSounds = !parseInt(localStorage.muteSounds) ? 1 : 0;
-        this.setState(Object.assign({
-            userId: this.userId,
-            activeWord: this.state.activeWord
-        }, this.state));
+        this.setState(Object.assign({}, this.state));
+    }
+
+    getDefaultCardSet() {
+        return {
+            goal: !this.customConfig.bigMode ? (this.customConfig.triMode ? 5 : 8) : (this.customConfig.triMode ? 8 : 11),
+            ext1: this.customConfig.triMode ? 2 : 1,
+            ext2: this.customConfig.triMode ? 1 : 0,
+            black: 1
+        };
+    }
+
+    handleChangeCardSet(evt) {
+        if (!isNaN(evt.target.valueAsNumber))
+            this.customConfig.cardSet[evt.target.id] = evt.target.valueAsNumber;
+        else
+            evt.target.value = this.customConfig.cardSet[evt.target.id];
+        this.setCardSetConstraints();
+    }
+
+    setCardSetConstraints() {
+
+        const whiteCount = (this.customConfig.bigMode ? 36 : 25) - Object.keys(this.customConfig.cardSet).reduce((prev, cur) =>
+            prev + (cur === "goal" ? (this.customConfig.triMode ? 3 : 2) * this.customConfig.cardSet[cur] : this.customConfig.cardSet[cur]), 0);
+        Object.keys(this.customConfig.cardSet).forEach((cardType) => {
+            document.getElementById(cardType).setAttribute(
+                "max",
+                this.customConfig.cardSet[cardType] + Math.ceil(whiteCount / (cardType === "goal" ? 3 : 1))
+            );
+        });
+    }
+
+    setCustomConfig() {
+        this.customConfig = {
+            triMode: !!this.state && this.state.triMode,
+            bigMode: !!this.state && this.state.bigMode
+        };
+        this.customConfig.cardSet = (this.state && this.state.cardSet) || this.getDefaultCardSet();
+    }
+
+    handleToggleShowCustom() {
+        if (this.userId === this.state.hostId) {
+            if (this.customConfig)
+                this.customConfig = null;
+            else
+                this.setCustomConfig();
+            this.setState(Object.assign(this.state, {
+                customConfig: this.customConfig
+            }), () => this.customConfig && this.configureCardSetInputs());
+        }
+    }
+
+    handleSetBigMode(state) {
+        this.customConfig.bigMode = state;
+        this.customConfig.cardSet = this.getDefaultCardSet();
+        this.configureCardSetInputs();
+    }
+
+    handleSetTriMode(state) {
+        this.customConfig.triMode = state;
+        this.customConfig.cardSet = this.getDefaultCardSet();
+        this.configureCardSetInputs();
+    }
+
+    configureCardSetInputs() {
+        Object.keys(this.customConfig.cardSet).forEach((cardType) => {
+            document.getElementById(cardType).value = this.customConfig.cardSet[cardType];
+        });
+        document.getElementById("ext2").disabled = !this.customConfig.triMode;
+        this.setState(Object.assign(this.state, {
+            customConfig: this.customConfig
+        }));
+        this.setCardSetConstraints();
     }
 
     handleClickTogglePause() {
-        this.socket.emit("toggle-pause");
+        if (this.state.paused && this.customConfig && (!this.state.cardSet || this.state.teamWin))
+            this.socket.emit("start-game-custom", this.customConfig);
+        else
+            this.socket.emit("toggle-pause");
     }
 
     handleToggleTeamLockClick() {
@@ -518,6 +603,7 @@ class Game extends React.Component {
                     "game"
                     + (this.state.teamWin ? ` ${this.state.teamWin}-win` : "")
                     + (this.state.timed ? " timed" : "")
+                    + (this.state.paused ? " paused" : "")
                     + (this.state.bigMode ? " big-mode" : "")
                     + (this.state.triMode ? " tri-mode" : "")
                     + (this.state.modeStarted === "pic" ? " pictures" : "")}
@@ -562,7 +648,7 @@ class Game extends React.Component {
                                     {data.timed ? (<div className="game-settings">
                                         <div className="set-master-first-time"><i title="master first time (0 as ∞)"
                                                                                   className="material-icons">timer</i>
-                                            {(isHost && !inProcess) ? (<input id="goal"
+                                            {(isHost && !inProcess) ? (<input id="master-first-time"
                                                                               type="number"
                                                                               defaultValue={this.state.masterFirstTime}
                                                                               min="0"
@@ -572,7 +658,7 @@ class Game extends React.Component {
                                         </div>
                                         <div className="set-master-time"><i title="master time"
                                                                             className="material-icons">alarm</i>
-                                            {(isHost && !inProcess) ? (<input id="goal"
+                                            {(isHost && !inProcess) ? (<input id="master-time"
                                                                               type="number"
                                                                               defaultValue={this.state.masterTime}
                                                                               min="0"
@@ -634,21 +720,104 @@ class Game extends React.Component {
                                         Hard
                                     </span>) : ""}
                                 </div>
+                                {(this.customConfig || this.state.cardSet) ? (
+                                    <div>
+                                        <div className="little-controls custom-card-set upper">
+                                            <div className="card-set-goal">
+                                                <div className="colored-cards-icon" title="colored cards">
+                                                    {(this.customConfig ? !this.customConfig.triMode : !this.state.triMode)
+                                                        ? (<div className="colored-cards-icon duo">
+                                                            <i className="material-icons card-set-red">stop</i>
+                                                            <i className="material-icons card-set-blu">stop</i>
+                                                        </div>)
+                                                        : (<div className="colored-cards-icon trio">
+                                                            <i className="material-icons card-set-red">stop</i>
+                                                            <i className="material-icons card-set-blu">stop</i>
+                                                            <i className="material-icons card-set-grn">stop</i>
+                                                        </div>)}
+                                                </div>
+
+                                                {(isHost && !inProcess) ? (<input id="goal"
+                                                                                  type="number"
+                                                                                  min="1"
+                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
+                                                />) : (<span className="value">{this.state.cardSet.goal}</span>)}
+                                            </div>
+                                            <div className="card-set-black"><i title="black cards"
+                                                                               className="material-icons">stop</i>
+                                                {(isHost && !inProcess) ? (<input id="black"
+                                                                                  type="number"
+                                                                                  min="0"
+                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
+                                                />) : (<span className="value">{this.state.cardSet.black}</span>)}
+                                            </div>
+                                            <div className="card-set-ext1"><i title="extra cards for 1st team"
+                                                                              className="material-icons">looks_one</i>
+                                                {(isHost && !inProcess) ? (<input id="ext1"
+                                                                                  type="number"
+                                                                                  min="0"
+                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
+                                                />) : (<span className="value">{this.state.cardSet.ext1}</span>)}
+                                            </div>
+                                            <div
+                                                className={"card-set-ext2"
+                                                + ((this.customConfig ? !this.customConfig.triMode : !this.state.triMode) ? " disabled" : "")}>
+                                                <i title="extra cards for 2nd team"
+                                                   className="material-icons">looks_two</i>
+                                                {(isHost && !inProcess) ? (<input id="ext2"
+                                                                                  type="number"
+                                                                                  min="0"
+                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
+                                                />) : (<span className="value">{this.state.cardSet.ext2}</span>)}
+                                            </div>
+                                            {(isHost && !inProcess && data.words.length > 0) ?
+                                                (<i onClick={() => this.handleClickRestart()}
+                                                    className="material-icons start-game settings-button">sync</i>) : ""}
+                                        </div>
+                                        <div className="little-controls custom-card-set">
+                                            <span
+                                                className={((isHost && !inProcess) ? " settings-button" : "")
+                                                + ((this.customConfig ? !this.customConfig.bigMode : !this.state.bigMode) ? " level-selected" : "")}
+                                                onClick={() => !inProcess && this.handleSetBigMode(false)}>
+                                            5 ✖ 5
+                                            </span>
+                                            <span
+                                                className={((isHost && !inProcess) ? " settings-button" : "")
+                                                + ((this.customConfig ? this.customConfig.bigMode : this.state.bigMode) ? " level-selected" : "")}
+                                                onClick={() => !inProcess && this.handleSetBigMode(true)}>
+                                            6 ✖ 6
+                                            </span>
+                                            <span
+                                                className={((isHost && !inProcess) ? " settings-button" : "")
+                                                + ((this.customConfig ? !this.customConfig.triMode : !this.state.triMode) ? " level-selected" : "")}
+                                                onClick={() => !inProcess && this.handleSetTriMode(false)}>
+                                            2 teams
+                                            </span>
+                                            <span
+                                                className={((isHost && !inProcess) ? " settings-button" : "")
+                                                + ((this.customConfig ? this.customConfig.triMode : this.state.triMode) ? " level-selected" : "")}
+                                                onClick={() => !inProcess && this.handleSetTriMode(true)}>
+                                            3 teams
+                                            </span>
+
+                                        </div>
+                                    </div>
+                                ) : ""}
                                 <div className="start-game-buttons">
                                     <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + ((!this.state.bigMode && !this.state.triMode) ? " level-selected" : "")}
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + ((!this.state.bigMode && !this.state.triMode && !this.state.cardSet) ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleClickStart("start-game")}><i
                                         className="material-icons">alarm</i>Normal
                                     </div>
                                     <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.bigMode && !this.state.triMode ? " level-selected" : "")}
-                                        onClick={() => !inProcess && this.handleClickStart("start-game-big")}><i
-                                        className="material-icons">zoom_out_map</i>Extended
-                                    </div>
-                                    <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.triMode ? " level-selected" : "")}
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + (!this.state.cardSet && this.state.triMode ? " level-selected" : "")}
                                         onClick={() => !inProcess && this.handleClickStart("start-game-tri")}><i
                                         className="material-icons">person_add</i>3 Teams
+                                    </div>
+                                    <div
+                                        className={((isHost && !inProcess) ? " settings-button" : "") + ((this.customConfig || this.state.cardSet) ? " level-selected" : "")}
+                                        onClick={() => !inProcess && this.handleToggleShowCustom()}><i
+                                        className="material-icons">settings_ethernet</i>Custom
                                     </div>
                                 </div>
                             </div>

@@ -124,6 +124,7 @@ body.dark-theme {
     cursor: default;
     text-align: right;
     z-index: 1;
+    width: 351px;
 }
 
 .word-red .word-box {
@@ -332,6 +333,90 @@ body.dark-theme {
     left: 0;
     right: 0;
     text-align: center;
+}
+
+.card-set-red {
+    color: #ff6450;
+}
+
+.card-set-blu {
+    color: #50bbff;
+}
+
+.card-set-grn {
+    color: #bcef86;
+}
+
+.card-set-black i {
+    color: #252525;
+}
+
+.colored-cards-icon {
+    position: relative;
+}
+
+.colored-cards-icon.duo {
+    top: -1px;
+    left: -1px;
+}
+
+.colored-cards-icon.trio {
+    top: -3px;
+    left: -3px;
+}
+
+.colored-cards-icon > i {
+    position: absolute;
+}
+
+.colored-cards-icon > i:first-child, .colored-cards-icon > i:first-child {
+    position: static;
+}
+
+.colored-cards-icon.duo .card-set-blu {
+    position: absolute;
+    left: 3px;
+    top: 2px;
+}
+
+.colored-cards-icon.trio .card-set-blu {
+    position: absolute;
+    left: 3px;
+    top: 2px;
+}
+
+.colored-cards-icon.trio .card-set-grn {
+    position: absolute;
+    left: 6px;
+    top: 4px;
+}
+
+.card-set-ext1 i, .card-set-ext2 i {
+    font-size: 17px;
+    margin-top: -1px;
+    width: 23px;
+}
+
+.custom-card-set > div {
+    margin-right: 3px;
+}
+
+.custom-card-set > div > i {
+    margin-top: -3px;
+    margin-right: 0;
+    text-align: center;
+}
+
+.custom-card-set .start-game {
+    vertical-align: text-top;
+    font-size: 21px;
+    float: right;
+    margin-top: 3px;
+    margin-right: 3px;
+}
+
+.game.paused .custom-card-set.upper {
+    text-align: left;
 }
 
 .team.red {
@@ -738,8 +823,22 @@ body {
     }
 }
 
-@media (min-width: 1110px) {
+@media (min-width: 768px) {
     .cards-count.big-number {
+        font-size: 119px;
+        transform: scaleY(1.86) translateY(-30px);
+    }
+}
+
+@media (min-width: 768px) {
+    .big-mode .cards-count.big-number {
+        font-size: 215px;
+        transform: none;
+    }
+}
+
+@media (min-width: 1110px) {
+    .big-mode .cards-count.big-number {
         font-size: 119px;
         transform: scaleY(1.86) translateY(-30px);
     }
@@ -915,6 +1014,30 @@ body {
 
 .little-controls.words-level {
     text-align: center;
+}
+
+.little-controls.custom-card-set > span {
+    padding: 2px;
+    display: inline-block;
+    margin: 4px;
+}
+
+.little-controls.custom-card-set {
+    text-align: center;
+    background: #eff3f9d1;
+}
+
+.dark-theme .little-controls.custom-card-set {
+    background: #353535fc;
+}
+
+.card-set-grn.disabled, .card-set-ext2.disabled {
+    opacity: 0.3;
+}
+
+.little-controls.custom-card-set.upper {
+    border: none;
+    margin-bottom: -6px;
 }
 
 .traitor-button {
