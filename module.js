@@ -116,7 +116,6 @@ function init(wsServer, path) {
                     joinSpectators(room.grnMaster);
                 },
                 removePlayer = (playerId) => {
-                    room.spectators.delete(playerId);
                     room.red.delete(playerId);
                     room.blu.delete(playerId);
                     if (room.bluMaster === playerId)
@@ -126,6 +125,13 @@ function init(wsServer, path) {
                     else if (room.grnMaster === playerId)
                         room.grnMaster = null;
                     room.playerTokens = [];
+                    if (room.spectators.has(playerId) || !room.onlinePlayers.has(playerId)) {
+                        room.spectators.delete(playerId);
+                        delete room.playerNames[playerId];
+                        registry.disconnect(playerId, "You was removed");
+                    }
+                    else
+                        room.spectators.add(playerId);
                 },
                 dealWords = () => {
                     state.words = state.words || [];
@@ -539,11 +545,8 @@ function init(wsServer, path) {
                     update();
                 },
                 "remove-player": (user, playerId) => {
-                    if (playerId && user === room.hostId) {
+                    if (playerId && user === room.hostId)
                         removePlayer(playerId);
-                        if (room.onlinePlayers.has(playerId))
-                            room.spectators.add(playerId);
-                    }
                     update();
                 },
                 "remove-offline": (user) => {
@@ -646,7 +649,7 @@ function init(wsServer, path) {
             Object.assign(this.room, snapshot.room);
             Object.assign(this.state, snapshot.state);
             this.room.paused = true;
-            this.room.onlinePlayers = new JSONSet(this.room.onlinePlayers);
+            this.room.onlinePlayers = new JSONSet();
             this.room.spectators = new JSONSet(this.room.spectators);
             this.room.red = new JSONSet(this.room.red);
             this.room.blu = new JSONSet(this.room.blu);
