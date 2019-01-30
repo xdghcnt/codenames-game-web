@@ -70,7 +70,7 @@ function init(wsServer, path) {
                     traitorMode: false,
                     traitors: [],
                     authRequired: false,
-                    wordsLevel: [false, true, true, true],
+                    wordsLevel: [false, true, false, false],
                     mode: "ru",
                     modeStarted: "ru",
                     turnOrder: [],
