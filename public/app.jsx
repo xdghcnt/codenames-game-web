@@ -135,7 +135,7 @@ class Team extends React.Component {
                 ) : ""}
                 {!data.hasCommand && data.userId === master && data.teamTurn === color && data.teamWin === null ? (
                     <div className="add-command">
-                        <input className="add-command-input" id="command-input"
+                        <input className="add-command-input" id="command-input" autoComplete="off"
                                onKeyDown={(evt) => evt.key === "Enter" && handleAddCommandClick(color)}/>
                         <div className="add-command-button" onClick={() => handleAddCommandClick(color)}>+</div>
                     </div>
