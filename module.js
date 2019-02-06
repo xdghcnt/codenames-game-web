@@ -89,7 +89,7 @@ function init(wsServer, path) {
             };
             this.state = state;
             const
-                send = (target, event, data) => userRegistry.send(target, event, data),
+                send = (target, event, arg1, arg2) => userRegistry.send(target, event, arg1, arg2),
                 update = () => send(room.onlinePlayers, "state", room),
                 leaveTeams = (user) => {
                     room.playerTokens = [];
