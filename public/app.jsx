@@ -284,7 +284,7 @@ class Game extends React.Component {
             }));
         });
         this.socket.on("message", text => {
-            alert(text);
+            popup.alert({content: text});
         });
         window.socket.on("disconnect", (event) => {
             this.setState({
@@ -414,21 +414,20 @@ class Game extends React.Component {
 
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
-        if (confirm(`Removing ${this.state.playerNames[id]}?`))
-            this.socket.emit("remove-player", id);
+        popup.confirm({content: `Removing ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
     }
 
     handleGiveHost(id, evt) {
         evt.stopPropagation();
-        if (confirm(`Give host ${this.state.playerNames[id]}?`))
-            this.socket.emit("give-host", id);
+        popup.confirm({content: `Give host ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("give-host", id));
     }
 
     handleEditCommand(command, index, color, evt) {
         evt.stopPropagation();
-        const newCommand = prompt("Edit command", command);
-        if (newCommand)
-            this.socket.emit("edit-command", newCommand, index, color);
+        popup.prompt({content: "New name"}, (evt) => {
+            if (evt.proceed && evt.input_value.trim())
+                this.socket.emit("edit-command", evt.input_value, index, color);
+        });
     }
 
     handleChangeTime(value, type) {
@@ -436,30 +435,43 @@ class Game extends React.Component {
     }
 
     handleClickChangeName() {
-        const name = prompt("New name");
-        this.socket.emit("change-name", name);
-        localStorage.userName = name;
+        popup.prompt({content: "New name"}, (evt) => {
+            if (evt.proceed && evt.input_value.trim()) {
+                this.socket.emit("change-name", evt.input_value);
+                localStorage.userName = evt.input_value;
+            }
+        });
     }
 
     handleClickShuffle() {
-        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?"))
+        if (this.state.words.length !== 0 && !this.state.teamWin)
+            popup.confirm({content: "Restart? Are you sure?"}, (evt) => evt.proceed && this.socket.emit("shuffle-players"));
+        else
             this.socket.emit("shuffle-players");
     }
 
     handleClickStart(mode) {
-        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?")) {
+        const restart = () => {
             this.customConfig = null;
             this.socket.emit(mode);
-        }
+        };
+        if (this.state.words.length !== 0 && !this.state.teamWin)
+            popup.confirm({content: "Restart? Are you sure?"}, (evt) => evt.proceed && restart());
+        else
+            restart();
     }
 
     handleClickRestart() {
-        if (this.state.words.length === 0 || this.state.teamWin || confirm("Restart? Are you sure?")) {
+        const restart = () => {
             if (this.customConfig)
                 this.socket.emit("start-game-custom", this.customConfig);
             else
                 this.socket.emit("restart-game");
-        }
+        };
+        if (this.state.words.length !== 0 && !this.state.teamWin)
+            popup.confirm({content: "Restart? Are you sure?"}, (evt) => evt.proceed && restart());
+        else
+            restart();
     }
 
     handleToggleWords(level) {

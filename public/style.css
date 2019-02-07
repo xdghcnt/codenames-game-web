@@ -1085,3 +1085,11 @@ body {
 .tri-mode .traitor-button {
     display: none;
 }
+
+.popup_modals .modal_buttons .btn.btn_pmry {
+    background-color: #baa697 !important;;
+}
+
+.popup_modals .modal_buttons .btn.btn_sdry {
+    background-color: #a0a0a0 !important;
+}
