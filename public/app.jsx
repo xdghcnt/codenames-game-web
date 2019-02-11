@@ -296,12 +296,12 @@ class Game extends React.Component {
         this.socket.on("reload", () => {
             setTimeout(() => window.location.reload(), 3000);
         });
-        this.socket.on("highlight-word", (wordIndex, playerId) => {
-            const wordNode = document.querySelector(`[data-wordIndex='${wordIndex}']`);
+        this.socket.on("highlight-word", (data) => {
+            const wordNode = document.querySelector(`[data-wordIndex='${data.index}']`);
             if (wordNode) {
                 if (!parseInt(localStorage.muteSounds)) {
                     const
-                        volR = (wordIndex % (this.state.bigMode ? 6 : 5)) / (this.state.bigMode ? 5 : 4),
+                        volR = (data.index % (this.state.bigMode ? 6 : 5)) / (this.state.bigMode ? 5 : 4),
                         volL = 1 - volR;
                     this.tapSoundL.volume = Math.max(volL, 0.2) * 0.3;
                     this.tapSoundR.volume = Math.max(volR, 0.2) * 0.3;
@@ -311,7 +311,7 @@ class Game extends React.Component {
                 wordNode.classList.add("highlight-anim");
                 setTimeout(() => wordNode && wordNode.classList.remove("highlight-anim"), 0);
             }
-            const playerNode = document.querySelector(`[data-playerId='${playerId}']`);
+                const playerNode = document.querySelector(`[data-playerId='${data.user}']`);
             if (playerNode) {
                 playerNode.classList.add("highlight-anim");
                 setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 0);

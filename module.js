@@ -89,7 +89,7 @@ function init(wsServer, path) {
             };
             this.state = state;
             const
-                send = (target, event, arg1, arg2) => userRegistry.send(target, event, arg1, arg2),
+                send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => send(room.onlinePlayers, "state", room),
                 leaveTeams = (user) => {
                     room.playerTokens = [];
@@ -129,8 +129,7 @@ function init(wsServer, path) {
                         room.spectators.delete(playerId);
                         delete room.playerNames[playerId];
                         registry.disconnect(playerId, "You was removed");
-                    }
-                    else
+                    } else
                         room.spectators.add(playerId);
                 },
                 dealWords = () => {
@@ -322,7 +321,7 @@ function init(wsServer, path) {
                     room.tokenCountdown = null;
                     room.playerTokens = [];
                     update();
-                    send(room.onlinePlayers, "highlight-word", index);
+                    send(room.onlinePlayers, "highlight-word", {index});
                 },
                 tokenChanged = (index) => {
                     if ([...room[room.teamTurn]].length === (room.playerTokens[index] && room.playerTokens[index].size)) {
@@ -330,8 +329,7 @@ function init(wsServer, path) {
                             chooseWord(index);
                         }, room.tokenDelay);
                         room.tokenCountdown = index;
-                    }
-                    else {
+                    } else {
                         clearTimeout(intervals.token);
                         room.tokenCountdown = null;
                     }
@@ -410,7 +408,7 @@ function init(wsServer, path) {
                         update();
                     }
                     if (room.red.has(user) || room.blu.has(user) || room.grn.has(user))
-                        send(room.onlinePlayers, "highlight-word", wordIndex, user);
+                        send(room.onlinePlayers, "highlight-word", {index: wordIndex, user});
                 },
                 "change-color": (user) => {
                     room.playerColors[user] = randomColor();
@@ -607,8 +605,7 @@ function init(wsServer, path) {
                         if (!isMaster) {
                             leaveTeams(user);
                             room[color].add(user)
-                        }
-                        else if (!room[`${color}Master`]) {
+                        } else if (!room[`${color}Master`]) {
                             leaveTeams(user);
                             room[`${color}Master`] = user;
                         }
