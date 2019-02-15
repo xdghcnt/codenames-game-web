@@ -424,7 +424,8 @@ class Game extends React.Component {
 
     handleEditCommand(command, index, color, evt) {
         evt.stopPropagation();
-        popup.prompt({content: "New name"}, (evt) => {
+        const commands = this.state[`${color}Commands`];
+        popup.prompt({content: "Edit command", value: commands[commands.length - 1]}, (evt) => {
             if (evt.proceed && evt.input_value.trim())
                 this.socket.emit("edit-command", evt.input_value, index, color);
         });
@@ -435,10 +436,10 @@ class Game extends React.Component {
     }
 
     handleClickChangeName() {
-        popup.prompt({content: "New name"}, (evt) => {
+        popup.prompt({content: "New name", value: this.state.playerNames[this.state.userId] || ""}, (evt) => {
             if (evt.proceed && evt.input_value.trim()) {
-                this.socket.emit("change-name", evt.input_value);
-                localStorage.userName = evt.input_value;
+                this.socket.emit("change-name", evt.input_value.trim());
+                localStorage.userName = evt.input_value.trim();
             }
         });
     }

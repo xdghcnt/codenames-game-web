@@ -92,7 +92,7 @@ function init(wsServer, path) {
                 send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => send(room.onlinePlayers, "state", room),
                 leaveTeams = (user) => {
-                    room.playerTokens = [];
+                    room.playerTokens.forEach((playersSet, index) => playersSet.delete(user) && tokenChanged(index));
                     room.red.delete(user);
                     room.blu.delete(user);
                     room.grn.delete(user);
@@ -568,10 +568,10 @@ function init(wsServer, path) {
                         if (room.grnMaster)
                             players.push(room.grnMaster);
                         shuffleArray(players);
-                        room.redMaster = players.shift();
-                        room.bluMaster = players.shift();
+                        room.redMaster = players.shift() || null;
+                        room.bluMaster = players.shift() || null;
                         if (room.triMode)
-                            room.grnMaster = players.shift();
+                            room.grnMaster = players.shift() || null;
                         if (!room.triMode) {
                             room.red = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
                             room.blu = new JSONSet(players);
@@ -647,7 +647,7 @@ function init(wsServer, path) {
             Object.assign(this.state, snapshot.state);
             this.room.paused = true;
             this.room.onlinePlayers = new JSONSet();
-            this.room.spectators = new JSONSet(this.room.spectators);
+            this.room.spectators = new JSONSet();
             this.room.red = new JSONSet(this.room.red);
             this.room.blu = new JSONSet(this.room.blu);
             this.room.grn = new JSONSet(this.room.grn);
