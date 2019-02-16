@@ -118,6 +118,7 @@ function init(wsServer, path) {
                 removePlayer = (playerId) => {
                     room.red.delete(playerId);
                     room.blu.delete(playerId);
+                    room.grn.delete(playerId);
                     if (room.bluMaster === playerId)
                         room.bluMaster = null;
                     else if (room.redMaster === playerId)
