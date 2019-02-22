@@ -80,7 +80,7 @@ body.dark-theme {
 }
 
 .player.offline {
-    color: #adadad;
+    opacity: 0.3;
 }
 
 .spectators {
