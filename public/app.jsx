@@ -85,7 +85,7 @@ class Team extends React.Component {
                                 <div className="join-placeholder">Become master</div>) : "Nothing here"
                     }
                 </div>
-                <div className="player-container" onClick={() => handleJoinClick(color)}>
+                <div className="player-container">
                     {
                         data[color].map(
                             player => (<Player key={player} data={data} id={player}
@@ -96,7 +96,7 @@ class Team extends React.Component {
                     }
                     {data.teamsLocked || ~data[color].indexOf(data.userId) ? ("")
                         : (
-                            <div className="join-placeholder">Join team</div>
+                            <div className="join-placeholder" onClick={() => handleJoinClick(color)}>Join team</div>
                         )}
                 </div>
                 {data[`${color}Count`] !== null ? (

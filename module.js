@@ -91,12 +91,13 @@ function init(wsServer, path) {
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => send(room.onlinePlayers, "state", room),
-                leaveTeams = (user) => {
+                leaveTeams = (user, keepSpectator) => {
                     room.playerTokens.forEach((playersSet, index) => playersSet.delete(user) && tokenChanged(index));
                     room.red.delete(user);
                     room.blu.delete(user);
                     room.grn.delete(user);
-                    room.spectators.delete(user);
+                    if (!keepSpectator)
+                        room.spectators.delete(user);
                     if (room.redMaster === user)
                         room.redMaster = null;
                     else if (room.bluMaster === user)
@@ -116,16 +117,7 @@ function init(wsServer, path) {
                     joinSpectators(room.grnMaster);
                 },
                 removePlayer = (playerId) => {
-                    room.red.delete(playerId);
-                    room.blu.delete(playerId);
-                    room.grn.delete(playerId);
-                    if (room.bluMaster === playerId)
-                        room.bluMaster = null;
-                    else if (room.redMaster === playerId)
-                        room.redMaster = null;
-                    else if (room.grnMaster === playerId)
-                        room.grnMaster = null;
-                    room.playerTokens = [];
+                    leaveTeams(playerId, true);
                     if (room.spectators.has(playerId) || !room.onlinePlayers.has(playerId)) {
                         room.spectators.delete(playerId);
                         delete room.playerNames[playerId];
