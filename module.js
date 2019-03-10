@@ -12,6 +12,16 @@ function init(wsServer, path) {
     fs.readFile(__dirname + "/words.json", "utf8", function (err, words) {
         defaultCodeWords = JSON.parse(words);
     });
+    fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
+        defaultCodeWords = JSON.parse(words);
+        fs.readFile(`${registry.config.appDir || __dirname}/moderated-words.json`, "utf8", function (err, words) {
+            if (words) {
+                let moderatedWords = JSON.parse(words);
+                moderatedWords[0] = defaultCodeWords[0];
+                defaultCodeWords = moderatedWords;
+            }
+        });
+    });
     fs.readFile(__dirname + "/words-en.json", "utf8", function (err, words) {
         engCodeWords = JSON.parse(words);
     });
