@@ -119,7 +119,8 @@ class Team extends React.Component {
                         </div>
                         {
                             data[`${color}Commands`].map(
-                                (command, index) => (<div className="command">{command}{data.hostId === data.userId ? (
+                                (command, index) => (<div className="command"
+                                                          onTouchStart={(e) => e.target.focus()}>{command}{data.hostId === data.userId ? (
                                     <div className="player-host-controls">
                                         <i className="material-icons host-button"
                                            title="Edit"
@@ -164,6 +165,7 @@ class Player extends React.Component {
             id = this.props.id;
         return (
             <div className={cs("player", {offline: !~data.onlinePlayers.indexOf(id), self: id === data.userId})}
+                 onTouchStart={(e) => e.target.focus()}
                  data-playerId={id}>
                 <div className="player-color" style={{background: data.playerColors[id]}}
                      onClick={(evt) => !evt.stopPropagation() && (id === data.userId) && this.props.handleChangeColor()}/>
@@ -638,7 +640,7 @@ class Game extends React.Component {
                                         handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
                                         handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}/>
                         </div>
-                        <div className="host-controls">
+                        <div className="host-controls" onTouchStart={(e) => e.target.focus()}>
                             <div className="host-controls-menu">
                                 <div className="little-controls">
                                     {data.timed ? (<div className="game-settings">
