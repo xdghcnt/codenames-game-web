@@ -22,12 +22,13 @@ class Words extends React.Component {
                     <div data={data}
                          onClick={() => handleWordClick(index)}
                          onMouseDown={() => handleWordPress(index)}
-                         className={
-                             "word"
-                             + (!data.teamWin && data.masterKey && data.masterKey[index] !== "none" ? " from-key" : "")
-                             + (data.key[index] ? ` word-guessed word-${data.key[index]}` : "")
-                             + ((data.masterKey && !data.key[index]) ? ` word-${data.masterKey[index]}` : "")
-                         }>
+                         className={cs("word",
+                             data.key[index] ? `word-${data.key[index]}` : "",
+                             data.masterKey && !data.key[index] ? `word-${data.masterKey[index]}` : "",
+                             {
+                                 "from-key": !data.teamWin && data.masterKey && data.masterKey[index] !== "none",
+                                 "word-guessed": data.key[index]
+                             })}>
                         <div className="word-box" data-wordIndex={index}>
                             <span>{data.modeStarted === "pic"
                                 ? (<img src={`/codenames/pictures/pic${word}.png`}/>)
@@ -41,10 +42,10 @@ class Words extends React.Component {
                                         <div className="player-token" style={{background: data.playerColors[player]}}/>)
                                 )}
                             </div>
-                            <div className={
-                                "token-countdown"
-                                + (data.tokenCountdown === index ? " active" : "")
-                                + " " + (data.teamTurn)}
+                            <div className={cs("token-countdown", {
+                                active: data.tokenCountdown === index,
+                                [data.teamTurn]: true
+                            })}
                                  style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
                         </div>
                     </div>
@@ -69,12 +70,10 @@ class Team extends React.Component {
             timeWarning = time !== 0 && time < 6000,
             isTeamTurn = data.teamTurn === color;
         return (
-            <div className={`team ${color} ${data.teamFailed === color ? "failed" : ""}`}>
+            <div className={cs("team", color, {failed: data.teamFailed === color})}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
-                    {data.teamTurn === color ? (<span className={
-                        "move-arrow"
-                        + (data.hasCommand ? " has-command" : "")
-                    }>➜</span>) : ""}
+                    {data.teamTurn === color ? (
+                        <span className={cs("move-arrow", {"has-command": data.hasCommand})}>➜</span>) : ""}
                     {
                         !!master
                             ? (<Player key={master} data={data} id={master}
@@ -100,7 +99,7 @@ class Team extends React.Component {
                         )}
                 </div>
                 {data[`${color}Count`] !== null ? (
-                    <div className={"cards-count" + (data[`${color}Count`] > 9 ? " big-number" : "")}>
+                    <div className={cs("cards-count", {"big-number": data[`${color}Count`] > 9})}>
                         {data[`${color}Count`]}
                     </div>
                 ) : ""}
@@ -108,11 +107,10 @@ class Team extends React.Component {
                     <div className="commands-container">
                         <div className="commands-title">
                             Log
-                            <div className={
-                                "timer"
-                                + ((isTeamTurn && data.timed && timeWarning && (data.masterAdditionalTime || data.hasCommand)) ? (" critical") : "")
-                                + ((isTeamTurn && data.timed && !data.hasCommand && (data.masterAdditionalTime || timeWarning) ? " additional" : ""))
-                            }>
+                            <div className={cs("timer", {
+                                critical: isTeamTurn && data.timed && timeWarning && (data.masterAdditionalTime || data.hasCommand),
+                                additional: isTeamTurn && data.timed && !data.hasCommand && (data.masterAdditionalTime || timeWarning)
+                            })}>
                                 <span className="timer-time">
                                     {time.toUTCString().match(/(\d\d:\d\d )/)[0].trim()}
                                 </span>
@@ -149,11 +147,9 @@ class Team extends React.Component {
                                     <div className="player-token" style={{background: data.playerColors[player]}}/>)
                             )}
                         </div>
-                        <div className={
-                            "token-countdown"
-                            + ((data.tokenCountdown === passValue && data.teamTurn === color) ? " active" : "")
-                            + " " + (data.teamTurn)}
-                             style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
+                        <div
+                            className={cs("token-countdown", data.teamTurn, {active: data.tokenCountdown === passValue && data.teamTurn === color})}
+                            style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
                     </div>
                 ) : ""}
             </div>
@@ -167,11 +163,7 @@ class Player extends React.Component {
             data = this.props.data,
             id = this.props.id;
         return (
-            <div className={
-                "player"
-                + (!~data.onlinePlayers.indexOf(id) ? " offline" : "")
-                + (id === data.userId ? " self" : "")
-            }
+            <div className={cs("player", {offline: !~data.onlinePlayers.indexOf(id), self: id === data.userId})}
                  data-playerId={id}>
                 <div className="player-color" style={{background: data.playerColors[id]}}
                      onClick={(evt) => !evt.stopPropagation() && (id === data.userId) && this.props.handleChangeColor()}/>
@@ -220,10 +212,7 @@ class Spectators extends React.Component {
         return (
             <div
                 onClick={handleSpectatorsClick}
-                className={
-                    "spectators"
-                    + (data.phase !== 0 ? " started" : " not-started")
-                }>
+                className={cs("spectators", {started: data.phase !== 0, "not-started": data.phase === 0})}>
                 Spectators:
                 {
                     data.spectators.length ? data.spectators.map(
@@ -311,7 +300,7 @@ class Game extends React.Component {
                 wordNode.classList.add("highlight-anim");
                 setTimeout(() => wordNode && wordNode.classList.remove("highlight-anim"), 0);
             }
-                const playerNode = document.querySelector(`[data-playerId='${data.user}']`);
+            const playerNode = document.querySelector(`[data-playerId='${data.user}']`);
             if (playerNode) {
                 playerNode.classList.add("highlight-anim");
                 setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 0);
@@ -612,21 +601,17 @@ class Game extends React.Component {
                 }, 100);
             }
             return (
-                <div className={
-                    "game"
-                    + (this.state.teamWin ? ` ${this.state.teamWin}-win` : "")
-                    + (this.state.timed ? " timed" : "")
-                    + (this.state.paused ? " paused" : "")
-                    + (this.state.bigMode ? " big-mode" : "")
-                    + (this.state.triMode ? " tri-mode" : "")
-                    + (this.state.modeStarted === "pic" ? " pictures" : "")}
+                <div className={cs("game",
+                    {
+                        [`${this.state.teamWin}-win`]: this.state.teamWin,
+                        timed: this.state.timed,
+                        paused: this.state.paused,
+                        "big-mode": this.state.bigMode,
+                        "tri-mode": this.state.triMode,
+                        pictures: this.state.modeStarted === "pic"
+                    })}
                      onMouseUp={() => this.handleWordRelease()}>
-                    <div className={
-                        "game-board"
-                        + (this.state.inited ? " active" : "")
-                        + (isMaster ? " isMaster" : "")
-                        + (data.teamsLocked ? " teamsLocked" : "")
-                    }>
+                    <div className={cs("game-board", {active: this.state.inited, isMaster, teamsLocked: data.team})}>
                         <div className="main-row">
                             {(!data.triMode ? ["red", "blu"] : ["red", "blu", "grn"]).map(color => (
                                 <Team
@@ -645,10 +630,8 @@ class Game extends React.Component {
                                    handleWordClick={index => this.handleWordClick(index)}
                                    handleWordPress={index => this.handleWordPress(index)}/>
                         </div>
-                        <div className={
-                            "spectators-section"
-                            + ((data.spectators.length > 0 || !data.teamsLocked) ? " active" : "")
-                        }>
+                        <div
+                            className={cs("spectators-section", {active: data.spectators.length > 0 || !data.teamsLocked})}>
                             <Spectators data={this.state}
                                         handleSpectatorsClick={() => this.handleSpectatorsClick()}
                                         handleChangeColor={() => this.handleChangeColor()}
@@ -712,23 +695,34 @@ class Game extends React.Component {
                                         {this.state.mode.toUpperCase()}
                                     </span> :</span>
                                     <span
-                                        className={((isHost && !inProcess && this.state.mode === "ru") ? " settings-button" : "")
-                                        + (this.state.wordsLevel[0] || this.state.mode !== "ru" ? " level-selected" : "")}
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess && this.state.mode === "ru",
+                                            "level-selected": this.state.wordsLevel[0] || this.state.mode !== "ru"
+                                        })}
                                         onClick={() => this.state.mode === "ru" && !inProcess && this.handleToggleWords(0)}>
                                         Original
                                     </span>
                                     {this.state.mode === "ru" ? (<span
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[1] ? " level-selected" : "")}
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": this.state.wordsLevel[1]
+                                        })}
                                         onClick={() => !inProcess && this.handleToggleWords(1)}>
                                         Easy
                                     </span>) : ""}
                                     {this.state.mode === "ru" ? (<span
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[2] ? " level-selected" : "")}
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": this.state.wordsLevel[2]
+                                        })}
                                         onClick={() => !inProcess && this.handleToggleWords(2)}>
                                         Normal
                                     </span>) : ""}
                                     {this.state.mode === "ru" ? (<span
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (this.state.wordsLevel[3] ? " level-selected" : "")}
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": this.state.wordsLevel[3]
+                                        })}
                                         onClick={() => !inProcess && this.handleToggleWords(3)}>
                                         Hard
                                     </span>) : ""}
@@ -773,8 +767,7 @@ class Game extends React.Component {
                                                 />) : (<span className="value">{this.state.cardSet.ext1}</span>)}
                                             </div>
                                             <div
-                                                className={"card-set-ext2"
-                                                + ((this.customConfig ? !this.customConfig.triMode : !this.state.triMode) ? " disabled" : "")}>
+                                                className={cs("card-set-ext2", {disabled: this.customConfig ? !this.customConfig.triMode : !this.state.triMode})}>
                                                 <i title="extra cards for 2nd team"
                                                    className="material-icons">looks_two</i>
                                                 {(isHost && !inProcess) ? (<input id="ext2"
@@ -789,26 +782,34 @@ class Game extends React.Component {
                                         </div>
                                         <div className="little-controls custom-card-set">
                                             <span
-                                                className={((isHost && !inProcess) ? " settings-button" : "")
-                                                + ((this.customConfig ? !this.customConfig.bigMode : !this.state.bigMode) ? " level-selected" : "")}
+                                                className={cs({
+                                                    "settings-button": isHost && !inProcess,
+                                                    "level-selected": this.customConfig ? !this.customConfig.bigMode : !this.state.bigMode
+                                                })}
                                                 onClick={() => !inProcess && this.handleSetBigMode(false)}>
                                             5 ✖ 5
                                             </span>
                                             <span
-                                                className={((isHost && !inProcess) ? " settings-button" : "")
-                                                + ((this.customConfig ? this.customConfig.bigMode : this.state.bigMode) ? " level-selected" : "")}
+                                                className={cs({
+                                                    "settings-button": isHost && !inProcess,
+                                                    "level-selected": this.customConfig ? this.customConfig.bigMode : this.state.bigMode
+                                                })}
                                                 onClick={() => !inProcess && this.handleSetBigMode(true)}>
                                             6 ✖ 6
                                             </span>
                                             <span
-                                                className={((isHost && !inProcess) ? " settings-button" : "")
-                                                + ((this.customConfig ? !this.customConfig.triMode : !this.state.triMode) ? " level-selected" : "")}
+                                                className={cs({
+                                                    "settings-button": isHost && !inProcess,
+                                                    "level-selected": this.customConfig ? !this.customConfig.triMode : !this.state.triMode
+                                                })}
                                                 onClick={() => !inProcess && this.handleSetTriMode(false)}>
                                             2 teams
                                             </span>
                                             <span
-                                                className={((isHost && !inProcess) ? " settings-button" : "")
-                                                + ((this.customConfig ? this.customConfig.triMode : this.state.triMode) ? " level-selected" : "")}
+                                                className={cs({
+                                                    "settings-button": isHost && !inProcess,
+                                                    "level-selected": this.customConfig ? this.customConfig.triMode : this.state.triMode
+                                                })}
                                                 onClick={() => !inProcess && this.handleSetTriMode(true)}>
                                             3 teams
                                             </span>
@@ -818,17 +819,26 @@ class Game extends React.Component {
                                 ) : ""}
                                 <div className="start-game-buttons">
                                     <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + ((!this.state.bigMode && !this.state.triMode && !this.state.cardSet) ? " level-selected" : "")}
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": !this.state.bigMode && !this.state.triMode && !this.state.cardSet
+                                        })}
                                         onClick={() => !inProcess && this.handleClickStart("start-game")}><i
                                         className="material-icons">alarm</i>Normal
                                     </div>
                                     <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + (!this.state.cardSet && this.state.triMode ? " level-selected" : "")}
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": !this.state.cardSet && this.state.triMode
+                                        })}
                                         onClick={() => !inProcess && this.handleClickStart("start-game-tri")}><i
                                         className="material-icons">person_add</i>3 Teams
                                     </div>
                                     <div
-                                        className={((isHost && !inProcess) ? " settings-button" : "") + ((this.customConfig || this.state.cardSet) ? " level-selected" : "")}
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": this.customConfig || this.state.cardSet
+                                        })}
                                         onClick={() => !inProcess && this.handleToggleShowCustom()}><i
                                         className="material-icons">settings_ethernet</i>Custom
                                     </div>
@@ -836,7 +846,10 @@ class Game extends React.Component {
                             </div>
                             <div className="side-buttons">
                                 <span
-                                    className={"start-game-buttons traitor-button" + ((isHost && !inProcess) ? " settings-button" : "") + (this.state.traitorMode ? " level-selected" : "")}
+                                    className={cs("start-game-buttons", "traitor-button", {
+                                        "settings-button": isHost && !inProcess,
+                                        "level-selected": this.state.traitorMode
+                                    })}
                                     onClick={() => !inProcess && this.toggleTraitorMode()}>
                                         <i className="material-icons">offline_bolt</i>Traitor mode
                                     </span>
@@ -873,8 +886,7 @@ class Game extends React.Component {
                     </div>
                 </div>
             );
-        }
-        else return (<div/>);
+        } else return (<div/>);
     }
 }
 
