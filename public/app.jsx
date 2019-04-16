@@ -416,7 +416,7 @@ class Game extends React.Component {
     handleEditCommand(command, index, color, evt) {
         evt.stopPropagation();
         const commands = this.state[`${color}Commands`];
-        popup.prompt({content: "Edit command", value: commands[commands.length - 1]}, (evt) => {
+        popup.prompt({content: "Edit command", value: commands[index]}, (evt) => {
             if (evt.proceed && evt.input_value.trim())
                 this.socket.emit("edit-command", evt.input_value, index, color);
         });
