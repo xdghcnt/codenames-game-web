@@ -193,7 +193,6 @@ body.dark-theme {
     flex-wrap: wrap;
     align-items: stretch;
     max-width: 910px;
-    margin: auto;
 }
 
 .word {
