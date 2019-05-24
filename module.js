@@ -604,7 +604,7 @@ function init(wsServer, path) {
                     update();
                 },
                 "team-join": (user, color, isMaster) => {
-                    if (color === "red" || color === "blu" || (room.triMode && color === "grn")) {
+                    if (!room.teamsLocked && (color === "red" || color === "blu" || (room.triMode && color === "grn"))) {
                         if (!isMaster) {
                             leaveTeams(user);
                             room[color].add(user)
