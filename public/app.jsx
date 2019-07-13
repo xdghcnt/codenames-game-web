@@ -250,6 +250,7 @@ class Game extends React.Component {
         initArgs.userId = this.userId = localStorage.codenamesUserId;
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.codenamesUserToken;
+        initArgs.userColor = localStorage.codeNamesUserColor;
         this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
@@ -265,6 +266,8 @@ class Game extends React.Component {
                     customConfig: this.customConfig
                 }, state),
                 () => this.customConfig && this.configureCardSetInputs());
+            if (this.state.playerColors[this.userId])
+                localStorage.codeNamesUserColor = this.state.playerColors[this.userId];
         });
         this.socket.on("masterKey", (data) => {
             this.setState(Object.assign({}, this.state, {
@@ -307,19 +310,6 @@ class Game extends React.Component {
                 playerNode.classList.add("highlight-anim");
                 setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 0);
             }
-        });
-        this.socket.on("auth-required", () => {
-            this.setState(Object.assign({}, this.state, {
-                userId: this.userId,
-                authRequired: true
-            }));
-            if (grecaptcha)
-                grecaptcha.render("captcha-container", {
-                    sitekey: "",
-                    callback: (key) => this.socket.emit("auth", key, initArgs)
-                });
-            else
-                setTimeout(() => window.location.reload(), 3000)
         });
         this.socket.on("prompt-delete-prev-room", (roomList) => {
             if (localStorage.acceptDelete =
@@ -416,7 +406,7 @@ class Game extends React.Component {
     handleEditCommand(command, index, color, evt) {
         evt.stopPropagation();
         const commands = this.state[`${color}Commands`];
-        popup.prompt({content: "Edit command", value: commands[index]}, (evt) => {
+            popup.prompt({content: "Edit command", value: commands[index]}, (evt) => {
             if (evt.proceed && evt.input_value.trim())
                 this.socket.emit("edit-command", evt.input_value, index, color);
         });

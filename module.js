@@ -364,7 +364,7 @@ function init(wsServer, path) {
                         room.spectators.add(user);
                     room.onlinePlayers.add(user);
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
-                    room.playerColors[user] = room.playerColors[user] || randomColor();
+                    room.playerColors[user] = data.userColor || room.playerColors[user] || randomColor();
                     sendMasterKey(user);
                     update();
                 },
