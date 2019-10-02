@@ -503,7 +503,7 @@ function init(wsServer, path) {
                     update();
                 },
                 "add-command": (user, color, command) => {
-                    if (command && room.teamTurn === color)
+                    if (command && !room.hasCommand && room.teamTurn === color && room[`${color}Master`] === user)
                         addCommand(color, command);
                     update();
                 },
