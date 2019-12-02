@@ -583,15 +583,6 @@ function init(wsServer, path) {
                             room.blu = new JSONSet(players.splice(0, Math.ceil(players.length / 2)));
                             room.grn = new JSONSet(players);
                         }
-                        [...room.blu].forEach((user) => {
-                            sendMasterKey(user);
-                        });
-                        [...room.red].forEach((user) => {
-                            sendMasterKey(user);
-                        });
-                        [...room.grn].forEach((user) => {
-                            sendMasterKey(user);
-                        });
                         startGame();
                         update();
                     }
