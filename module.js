@@ -175,7 +175,7 @@ function init(wsServer, path) {
                         .concat(Array.apply(null, new Array(cardSet.black)).map(() => "black")));
                     room.passIndex = room.words.length + 1;
                     room.modeStarted = room.mode;
-                    [room.redMaster, room.bluMaster, room.grnMaster, state.traitors.blu, state.traitors.red].forEach((user) => {
+                    [...room.onlinePlayers].forEach((user) => {
                         sendMasterKey(user);
                     });
                 },
