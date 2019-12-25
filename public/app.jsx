@@ -241,7 +241,9 @@ class Game extends React.Component {
             localStorage.codenamesUserToken = makeId();
         }
         if (!location.hash)
-            history.replaceState(undefined, undefined, "#" + makeId());
+            history.replaceState(undefined, undefined, location.origin + location.pathname + "#" + makeId());
+        else
+            history.replaceState(undefined, undefined, location.origin + location.pathname + location.hash);
         if (localStorage.acceptDelete) {
             initArgs.acceptDelete = localStorage.acceptDelete;
             delete localStorage.acceptDelete;
@@ -251,7 +253,7 @@ class Game extends React.Component {
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.codenamesUserToken;
         initArgs.userColor = localStorage.codeNamesUserColor;
-        initArgs.wssToken = window.wssToken;
+        //initArgs.wssToken = window.wssToken;
         this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
