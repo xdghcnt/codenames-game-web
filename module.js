@@ -27,9 +27,8 @@ function init(wsServer, path) {
     });
     const defaultCodePics = Array(278).fill().map((_, idx) => idx + 1);
 
-    app.get(path, function (req, res) {
-        res.sendFile(`${__dirname}/public/app.html`);
-    });
+    registry.handleAppPage(path, `${__dirname}/public/app.html`);
+
     app.use("/codenames", express.static(`${__dirname}/public`));
 
     class GameState extends EventEmitter {
