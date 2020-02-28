@@ -692,7 +692,7 @@ class Game extends React.Component {
                                     <span
                                         className={cs({
                                             "settings-button": isHost && !inProcess && this.state.mode === "ru",
-                                            "level-selected": this.state.wordsLevel[0] || this.state.mode !== "ru"
+                                            "level-selected": this.state.wordsLevel === 0 || this.state.mode !== "ru"
                                         })}
                                         onClick={() => this.state.mode === "ru" && !inProcess && this.handleToggleWords(0)}>
                                         Original
@@ -700,26 +700,10 @@ class Game extends React.Component {
                                     {this.state.mode === "ru" ? (<span
                                         className={cs({
                                             "settings-button": isHost && !inProcess,
-                                            "level-selected": this.state.wordsLevel[1]
+                                            "level-selected": this.state.wordsLevel === 1
                                         })}
                                         onClick={() => !inProcess && this.handleToggleWords(1)}>
-                                        Easy
-                                    </span>) : ""}
-                                    {this.state.mode === "ru" ? (<span
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": this.state.wordsLevel[2]
-                                        })}
-                                        onClick={() => !inProcess && this.handleToggleWords(2)}>
-                                        Normal
-                                    </span>) : ""}
-                                    {this.state.mode === "ru" ? (<span
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": this.state.wordsLevel[3]
-                                        })}
-                                        onClick={() => !inProcess && this.handleToggleWords(3)}>
-                                        Hard
+                                        Full
                                     </span>) : ""}
                                 </div>
                                 {(this.customConfig || this.state.cardSet) ? (

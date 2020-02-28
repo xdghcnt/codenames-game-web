@@ -9,9 +9,6 @@ function init(wsServer, path) {
         channel = "codenames";
 
     let defaultCodeWords, engCodeWords;
-    fs.readFile(__dirname + "/words.json", "utf8", function (err, words) {
-        defaultCodeWords = JSON.parse(words);
-    });
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
         defaultCodeWords = JSON.parse(words);
         fs.readFile(`${registry.config.appDir || __dirname}/moderated-words.json`, "utf8", function (err, words) {
@@ -140,11 +137,7 @@ function init(wsServer, path) {
                     const wordsCount = room.bigMode ? 36 : 25;
                     if (room.mode !== "pic") {
                         if (state.words.length < wordsCount) {
-                            state.words = [];
-                            room.wordsLevel.forEach((value, index) => {
-                                if (value)
-                                    state.words = room.mode !== "en" ? state.words.concat(defaultCodeWords[index]) : state.words.concat(engCodeWords[0]);
-                            });
+                            state.words = room.mode !== "en" ? defaultCodeWords[room.wordsLevel] : engCodeWords[0];
                             shuffleArray(state.words);
                         }
                         room.words = state.words.splice(0, wordsCount);
@@ -458,9 +451,9 @@ function init(wsServer, path) {
                     }
                 },
                 "toggle-words-level": (user, level) => {
-                    if (user === room.hostId && ~[0, 1, 2, 3].indexOf(level) && room.wordsLevel.filter((value, index) => index !== level && value).length > 0) {
+                    if (user === room.hostId && ~[0, 1, 2, 3].indexOf(level)) {
                         state.words = [];
-                        room.wordsLevel[level] = !room.wordsLevel[level];
+                        room.wordsLevel = level;
                     }
                     update();
                 },
