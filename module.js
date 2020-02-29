@@ -76,7 +76,7 @@ function init(wsServer, path) {
                     traitorMode: false,
                     traitors: [],
                     authRequired: false,
-                    wordsLevel: [false, true, false, false],
+                    wordsLevel: 1,
                     mode: "ru",
                     modeStarted: "ru",
                     turnOrder: [],
@@ -137,7 +137,10 @@ function init(wsServer, path) {
                     const wordsCount = room.bigMode ? 36 : 25;
                     if (room.mode !== "pic") {
                         if (state.words.length < wordsCount) {
-                            state.words = room.mode !== "en" ? defaultCodeWords[room.wordsLevel] : engCodeWords[0];
+                            state.words = [];
+                            state.words = room.mode !== "en"
+                                ? state.words.concat(defaultCodeWords[room.wordsLevel])
+                                : state.words.concat(engCodeWords[0]);
                             shuffleArray(state.words);
                         }
                         room.words = state.words.splice(0, wordsCount);
