@@ -33,7 +33,7 @@ class Words extends React.Component {
                             <span>{data.modeStarted === "pic"
                                 ? (<img src={`/codenames/pictures/pic${word}.png`}/>)
                                 : word
-                                && (data.modeStarted === "ru"
+                                && ((data.modeStarted === "ru" || data.modeStarted === "alias")
                                     ? window.hyphenate
                                     : window.hyphenateEn)(word)}</span>
                             <div className="player-tokens">
@@ -689,14 +689,14 @@ class Game extends React.Component {
                                         onClick={() => !inProcess && this.handleToggleWordsMode()}>
                                         {this.state.mode.toUpperCase()}
                                     </span> :</span>
-                                    <span
+                                    {this.state.mode !== "alias" ? (<span
                                         className={cs({
                                             "settings-button": isHost && !inProcess && this.state.mode === "ru",
                                             "level-selected": this.state.wordsLevel === 0 || this.state.mode !== "ru"
                                         })}
                                         onClick={() => this.state.mode === "ru" && !inProcess && this.handleToggleWords(0)}>
                                         Original
-                                    </span>
+                                    </span>) : ""}
                                     {this.state.mode === "ru" ? (<span
                                         className={cs({
                                             "settings-button": isHost && !inProcess,
@@ -704,6 +704,30 @@ class Game extends React.Component {
                                         })}
                                         onClick={() => !inProcess && this.handleToggleWords(1)}>
                                         Full
+                                    </span>) : ""}
+                                    {this.state.mode === "alias" ? (<span
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": this.state.wordsLevel === 1
+                                        })}
+                                        onClick={() => !inProcess && this.handleToggleWords(1)}>
+                                        Easy
+                                    </span>) : ""}
+                                    {this.state.mode === "alias" ? (<span
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": this.state.wordsLevel === 2
+                                        })}
+                                        onClick={() => !inProcess && this.handleToggleWords(2)}>
+                                        Normal
+                                    </span>) : ""}
+                                    {this.state.mode === "alias" ? (<span
+                                        className={cs({
+                                            "settings-button": isHost && !inProcess,
+                                            "level-selected": this.state.wordsLevel === 3
+                                        })}
+                                        onClick={() => !inProcess && this.handleToggleWords(3)}>
+                                        Hard
                                     </span>) : ""}
                                 </div>
                                 {(this.customConfig || this.state.cardSet) ? (

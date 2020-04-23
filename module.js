@@ -138,7 +138,7 @@ function init(wsServer, path) {
                     if (room.mode !== "pic") {
                         if (state.words.length < wordsCount) {
                             state.words = [];
-                            state.words = room.mode !== "en"
+                            state.words = ["ru", "alias"].includes(room.mode)
                                 ? state.words.concat(defaultCodeWords[room.wordsLevel])
                                 : state.words.concat(engCodeWords[0]);
                             shuffleArray(state.words);
@@ -464,10 +464,11 @@ function init(wsServer, path) {
                     if (user === room.hostId) {
                         state.words = [];
                         let
-                            modeList = ["ru", "en", "pic"],
+                            modeList = ["ru", "en", "pic", "alias"],
                             nextMode = modeList.indexOf(room.mode) + 1;
                         if (!modeList[nextMode])
                             nextMode = 0;
+                        room.wordsLevel = 1;
                         room.mode = modeList[nextMode];
                     }
                     update();
