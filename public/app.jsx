@@ -262,6 +262,7 @@ class Game extends React.Component {
                 this.setCustomConfig();
             else if (this.state && this.state.paused && state.cardSet && !state.paused)
                 this.customConfig = false;
+            CommonRoom.processCommonRoom(state, this.state);
             this.setState(Object.assign({
                     userId: this.userId,
                     masterKey: this.state.masterKey,
@@ -886,6 +887,7 @@ class Game extends React.Component {
                             </div>
                             <i className="settings-hover-button material-icons">settings</i>
                         </div>
+                        <CommonRoom state={this.state}/>
                     </div>
                 </div>
             );
