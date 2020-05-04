@@ -859,7 +859,7 @@ class Game extends React.Component {
                                         <i className="material-icons">offline_bolt</i>Traitor mode
                                     </span>
                                 <i onClick={() => this.socket.emit("set-room-mode", false)}
-                                   className="material-icons exit settings-button">home</i>
+                                   className="material-icons exit settings-button">store</i>
                                 {(isHost && !inProcess && data.words.length > 0) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
