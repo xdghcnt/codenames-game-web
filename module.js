@@ -4,7 +4,6 @@ function init(wsServer, path) {
         express = require('express'),
         app = wsServer.app,
         registry = wsServer.users,
-        EventEmitter = require("events"),
         randomColor = require('randomcolor'),
         channel = "codenames";
 
@@ -28,9 +27,9 @@ function init(wsServer, path) {
 
     app.use("/codenames", express.static(`${__dirname}/public`));
 
-    class GameState extends EventEmitter {
+    class GameState extends wsServer.users.RoomState {
         constructor(hostId, hostData, userRegistry) {
-            super();
+            super(hostId, hostData, userRegistry);
             const
                 room = {
                     inited: true,
@@ -271,7 +270,7 @@ function init(wsServer, path) {
                                 const
                                     sorted = votedWords.reverse().sort((a, b) => b.votes - a.votes),
                                     mostVoted = sorted && sorted[0] && (!sorted[1] || (sorted[0].votes > sorted[1].votes));
-                                chooseWord((mostVoted && sorted[0].index) || room.passIndex);
+                                chooseWord(mostVoted ? sorted[0].index : room.passIndex);
                             }
                         } else time = new Date();
                     }, 100);

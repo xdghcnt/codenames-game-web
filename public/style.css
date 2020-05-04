@@ -86,7 +86,7 @@ body.dark-theme {
 .spectators {
     display: inline-block;
     height: 20px;
-    padding: 10px;
+    padding: 4px 6px;
     cursor: pointer;
     background: rgba(255, 252, 245, 0.58);
     user-select: none;
@@ -106,8 +106,8 @@ body.dark-theme {
     display: none;
     text-align: center;
     position: fixed;
-    left: 0;
-    bottom: 0;
+    right: 0;
+    top: 0;
 }
 
 .spectators-section.active {
@@ -1080,18 +1080,26 @@ body {
     background-color: #a0a0a0 !important;
 }
 
-.room-main-link {
+.panel {
     background: rgba(255, 252, 245, 0.58);
 }
 
-.room-main-link a {
-    color: black;
-}
-
-.dark-theme .room-main-link {
+.dark-theme .panel {
     background: rgba(63, 63, 62, 0.78);
 }
 
-.dark-theme .room-main-link a {
+a, text-color {
+    color: black;
+}
+
+.dark-theme a, .dark-theme .text-color {
     color: #cccaca;
+}
+
+.panel-accent {
+    background: #e8d4d4;
+}
+
+.dark-theme .panel-accent {
+    background: #4c4c4c;
 }

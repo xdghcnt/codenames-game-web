@@ -256,6 +256,7 @@ class Game extends React.Component {
         initArgs.wssToken = window.wssToken;
         this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
+            state.showWatermark = state.teamWin !== null;
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
                 this.chimeSound.play();
             if (!this.state || !this.state.paused && state.cardSet && state.paused)
@@ -410,7 +411,7 @@ class Game extends React.Component {
     handleEditCommand(command, index, color, evt) {
         evt.stopPropagation();
         const commands = this.state[`${color}Commands`];
-            popup.prompt({content: "Edit command", value: commands[index]}, (evt) => {
+        popup.prompt({content: "Edit command", value: commands[index]}, (evt) => {
             if (evt.proceed && evt.input_value.trim())
                 this.socket.emit("edit-command", evt.input_value, index, color);
         });
@@ -857,8 +858,8 @@ class Game extends React.Component {
                                     onClick={() => !inProcess && this.toggleTraitorMode()}>
                                         <i className="material-icons">offline_bolt</i>Traitor mode
                                     </span>
-                                <i onClick={() => window.location = parentDir}
-                                   className="material-icons exit settings-button">exit_to_app</i>
+                                <i onClick={() => this.socket.emit("set-room-mode", false)}
+                                   className="material-icons exit settings-button">home</i>
                                 {(isHost && !inProcess && data.words.length > 0) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
@@ -887,7 +888,7 @@ class Game extends React.Component {
                             </div>
                             <i className="settings-hover-button material-icons">settings</i>
                         </div>
-                        <CommonRoom state={this.state}/>
+                        <CommonRoom state={this.state} app={this}/>
                     </div>
                 </div>
             );
