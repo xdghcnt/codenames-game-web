@@ -858,8 +858,9 @@ class Game extends React.Component {
                                     onClick={() => !inProcess && this.toggleTraitorMode()}>
                                         <i className="material-icons">offline_bolt</i>Traitor mode
                                     </span>
-                                <i onClick={() => this.socket.emit("set-room-mode", false)}
-                                   className="material-icons exit settings-button">store</i>
+                                {this.state.userId === this.state.hostId ?
+                                    <i onClick={() => this.socket.emit("set-room-mode", false)}
+                                       className="material-icons exit settings-button">store</i> : ""}
                                 {(isHost && !inProcess && data.words.length > 0) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
