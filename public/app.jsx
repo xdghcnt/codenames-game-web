@@ -17,39 +17,42 @@ class Words extends React.Component {
             handleWordClick = this.props.handleWordClick,
             handleWordPress = this.props.handleWordPress;
         return (
-            <div className="words">
-                {data.words.map((word, index) => (
-                    <div data={data}
-                         onClick={() => handleWordClick(index)}
-                         onMouseDown={() => handleWordPress(index)}
-                         className={cs("word",
-                             data.key[index] ? `word-${data.key[index]}` : "",
-                             data.masterKey && !data.key[index] ? `word-${data.masterKey[index]}` : "",
-                             {
-                                 "from-key": !data.teamWin && data.masterKey && data.masterKey[index] !== "none",
-                                 "word-guessed": data.key[index]
-                             })}>
-                        <div className="word-box" data-wordIndex={index}>
+            <div className="words-wrap">
+                <div className="words">
+                    {data.words.map((word, index) => (
+                        <div data={data}
+                             onClick={() => handleWordClick(index)}
+                             onMouseDown={() => handleWordPress(index)}
+                             className={cs("word",
+                                 data.key[index] ? `word-${data.key[index]}` : "",
+                                 data.masterKey && !data.key[index] ? `word-${data.masterKey[index]}` : "",
+                                 {
+                                     "from-key": !data.teamWin && data.masterKey && data.masterKey[index] !== "none",
+                                     "word-guessed": data.key[index]
+                                 })}>
+                            <div className="word-box" data-wordIndex={index}>
                             <span>{data.modeStarted === "pic"
                                 ? (<img src={`/codenames/pictures/pic${word}.png`}/>)
                                 : word
                                 && ((data.modeStarted === "ru" || data.modeStarted === "alias")
                                     ? window.hyphenate
                                     : window.hyphenateEn)(word)}</span>
-                            <div className="player-tokens">
-                                {data.playerTokens[index] && data.playerTokens[index].filter(player => player).map(
-                                    player => (
-                                        <div className="player-token" style={{background: data.playerColors[player]}}/>)
-                                )}
+                                <div className="player-tokens">
+                                    {data.playerTokens[index] && data.playerTokens[index].filter(player => player).map(
+                                        player => (
+                                            <div className="player-token"
+                                                 style={{background: data.playerColors[player]}}/>)
+                                    )}
+                                </div>
+                                <div className={cs("token-countdown", {
+                                    active: data.tokenCountdown === index,
+                                    [data.teamTurn]: true
+                                })}
+                                     style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
                             </div>
-                            <div className={cs("token-countdown", {
-                                active: data.tokenCountdown === index,
-                                [data.teamTurn]: true
-                            })}
-                                 style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         );
     }

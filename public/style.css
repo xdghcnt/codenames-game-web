@@ -188,11 +188,17 @@ body.dark-theme {
 }
 
 .words {
+    max-width: 910px;
     display: flex;
     flex: 5 1 0;
-    flex-wrap: wrap;
     align-items: stretch;
-    max-width: 910px;
+    flex-wrap: wrap;
+}
+
+.words-wrap {
+    display: flex;
+    flex: 1;
+    justify-content: center;
 }
 
 .word {
@@ -763,7 +769,7 @@ body {
         order: 0 !important;
     }
 
-    .words {
+    .words-wrap {
         flex: auto;
     }
 
@@ -805,8 +811,11 @@ body {
         order: 0 !important;
     }
 
-    .big-mode .words {
+    .big-mode .words-wrap {
         flex: auto;
+    }
+
+    .big-mode .words {
         max-width: initial;
     }
 
