@@ -746,6 +746,12 @@ body {
     }
 }
 
+@media (max-height: 615px) and (min-width: 768px) {
+    .team {
+        padding-top: 32px;
+    }
+}
+
 @media (max-width: 767px) {
     .spectators-section {
         bottom: 0;
