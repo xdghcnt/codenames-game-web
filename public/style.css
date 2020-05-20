@@ -752,6 +752,15 @@ body {
     }
 }
 
+@media (max-height: 645px) and (min-width: 768px) {
+    .host-controls {
+        opacity: 0.6;
+    }
+    .host-controls:hover {
+        opacity: 1;
+    }
+}
+
 @media (max-width: 767px) {
     .spectators-section {
         bottom: 0;
