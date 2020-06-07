@@ -146,6 +146,18 @@ body.dark-theme {
     box-shadow: 0 0 0 20px rgba(80, 187, 255, 0);
 }
 
+.turn-blu .crowd-tokens {
+    color: #50bbff;
+}
+
+.turn-red .crowd-tokens {
+    color: #ff6450;
+}
+
+.turn-grn .crowd-tokens {
+    color: #bcef86;
+}
+
 .word-blu .word-box.highlight-anim {
     box-shadow: 0 0 0 0 #50bbff;
 }
@@ -537,15 +549,15 @@ body.dark-theme {
     transition-property: none;
 }
 
-.token-countdown.red {
+.token-countdown.red, .team.red .crowd-self .player-color {
     background: #ff6450;
 }
 
-.token-countdown.blu {
+.token-countdown.blu, .team.blu .crowd-self .player-color {
     background: #50bbff;
 }
 
-.token-countdown.grn {
+.token-countdown.grn, .team.grn .crowd-self .player-color {
     background: #bcef86;
 }
 
@@ -562,19 +574,27 @@ body.dark-theme {
     background: #3a79ff;
 }
 
-.isMaster .word-grn .token-countdown.grn {
+.isMaster .word-grn .token-countdown.grn  {
     background: #6dff4f;
 }
 
 .pass-button {
-    cursor: pointer;
     margin-bottom: 4px;
     margin-top: 11px;
 }
 
+.pass-button.active {
+    cursor: pointer;
+}
+
 .pass-button-title {
-    border-bottom: 1px dotted;
     display: inline-block;
+    opacity: 0.5;
+}
+
+.pass-button.active .pass-button-title {
+    border-bottom: 1px dotted;
+    opacity: 1;
 }
 
 .game.red-win {
@@ -890,7 +910,7 @@ body {
 
 .start-game-buttons div {
     display: inline-block;
-    padding: 17px;
+    padding: 17px 21px;
 }
 
 .little-controls div {
@@ -949,7 +969,7 @@ body {
 }
 
 .host-controls:hover, .host-controls:focus {
-    width: 351px;
+    width: 363px;
 }
 
 .host-controls:hover .side-buttons, .host-controls:focus .side-buttons {
@@ -1131,5 +1151,85 @@ a, text-color {
 }
 
 .dark-theme .panel-accent {
-    background: #4c4c4c;
+    background: #6a5f57;
+}
+
+.crowd-tokens {
+    position: absolute;
+    right: 4px;
+    bottom: 8px;
+    border: 2px solid;
+    border-radius: 25px;
+    padding: 0 5px;
+    font-size: 17px;
+    background: #ffffff33;
+}
+
+.pass-button .crowd-tokens {
+    right: 8px;
+    bottom: 10px;
+}
+
+.crowd {
+    margin-bottom: 4px;
+    color: darkgrey;
+}
+
+.spectators .crowd {
+    display: inline-block;
+}
+
+.crowd-menu-wrapper {
+    background: #00000033;
+    backdrop-filter: blur(3px);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.crowd-menu {
+    width: 410px;
+    padding: 20px;
+}
+
+.crowd-icon {
+    vertical-align: bottom;
+}
+
+.crowd-menu-close {
+    cursor: pointer;
+    float: right;
+}
+
+.crowd-menu-title {
+    font-size: 24px;
+}
+
+.crowd-menu-button.panel-accent {
+    padding: 4px;
+    text-align: center;
+    margin-top: 5px;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.crowd-menu-button.disabled {
+    background: #3e3d3c;
+}
+
+.crowd-link {
+    background: #0000004d;
+    padding: 6px;
+    margin-bottom: 10px;
+    margin-top: 4px;
+}
+
+.crowd-self {
+    font-style: italic;
 }

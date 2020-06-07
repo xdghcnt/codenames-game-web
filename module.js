@@ -81,7 +81,14 @@ function init(wsServer, path) {
                     turnOrder: [],
                     bigMode: false,
                     triMode: false,
-                    cardSet: null
+                    cardSet: null,
+                    crowdMode: false,
+                    redCrowd: 0,
+                    bluCrowd: 0,
+                    grnCrowd: 0,
+                    spectatorsCrowd: 0,
+                    crowdTokens: [],
+                    masterPlayers: new JSONSet()
                 },
                 intervals = {};
             this.room = room;
@@ -90,31 +97,49 @@ function init(wsServer, path) {
                 traitors: {},
                 masterKey: null,
                 words: null,
-                pics: null
+                pics: null,
+                tokenPerPlayer: {},
+                redCrowdPlayers: new JSONSet(),
+                bluCrowdPlayers: new JSONSet(),
+                grnCrowdPlayers: new JSONSet(),
+                spectatorsCrowdPlayers: new JSONSet()
             };
             this.state = state;
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => send(room.onlinePlayers, "state", room),
                 leaveTeams = (user, keepSpectator) => {
-                    room.playerTokens.forEach((playersSet, index) => playersSet.delete(user) && tokenChanged(index));
-                    room.red.delete(user);
-                    room.blu.delete(user);
-                    room.grn.delete(user);
+                    room.playerTokens[state.tokenPerPlayer] && room.playerTokens[state.tokenPerPlayer].delete(user);
+                    ["red", "blu", "grn"].forEach((color) => {
+                        room[color].delete(user);
+                        if (state[`${color}CrowdPlayers`].delete(user))
+                            room[`${color}Crowd`]--;
+                        if (room[`${color}Master`] === user)
+                            room[`${color}Master`] = null;
+                    });
                     if (!keepSpectator)
                         room.spectators.delete(user);
-                    if (room.redMaster === user)
-                        room.redMaster = null;
-                    else if (room.bluMaster === user)
-                        room.bluMaster = null;
-                    else if (room.grnMaster === user)
-                        room.grnMaster = null;
+                    if (room.crowdMode && !room.masterPlayers.has(user))
+                        if (!keepSpectator)
+                            state.spectatorsCrowdPlayers.delete(user);
+                        else
+                            state.spectatorsCrowdPlayers.add(user);
+                    room.spectatorsCrowd = state.spectatorsCrowdPlayers.size;
                     send(user, "masterKey", {key: null, traitor: null});
                 },
-                joinSpectators = (user) => {
+                joinSpectators = (user, initial) => {
                     if (user) {
-                        leaveTeams(user);
-                        room.spectators.add(user);
+                        if (!initial)
+                            leaveTeams(user);
+                        if (room.crowdMode && !room.masterPlayers.has(user)) {
+                            state.spectatorsCrowdPlayers.add(user);
+                            room.spectatorsCrowd = state.spectatorsCrowdPlayers.size;
+                            if (!initial)
+                                send(user, "crowd-joined", null);
+                        } else {
+                            if (room.onlinePlayers.has(user))
+                                room.spectators.add(user);
+                        }
                     }
                 },
                 clearGrnTeam = () => {
@@ -193,12 +218,15 @@ function init(wsServer, path) {
                 },
                 startGame = () => {
                     room.paused = false;
-                    room.teamsLocked = true;
+                    if (!room.crowdMode)
+                        room.teamsLocked = true;
                     room.teamFailed = null;
                     room.redCommands = [];
                     room.bluCommands = [];
                     room.grnCommands = [];
                     room.playerTokens = [];
+                    room.crowdTokens = [];
+                    state.tokenPerPlayer = {};
                     room.traitors = [];
                     room.teamWin = null;
                     room.time = null;
@@ -257,20 +285,27 @@ function init(wsServer, path) {
                             time = new Date();
                             if (room.time <= 0) {
                                 clearTimeout(intervals.token);
-                                const votedWords = [];
-                                let usedTokens = 0;
-                                room.playerTokens[room.passIndex] = room.playerTokens[room.passIndex] || new JSONSet();
-                                room.playerTokens.forEach((players, index) => {
-                                    const word = {index: index, votes: players.size};
-                                    usedTokens += players.size;
-                                    if (index === room.passIndex)
-                                        word.votes += [...room[room.teamTurn]].length - usedTokens;
-                                    votedWords.push(word);
-                                });
+                                let votedWords = [];
+                                if (!room.crowdMode) {
+                                    let usedTokens = 0;
+                                    room.playerTokens[room.passIndex] = room.playerTokens[room.passIndex] || new JSONSet();
+                                    room.playerTokens.forEach((players, index) => {
+                                        const word = {index: index, votes: players.size};
+                                        usedTokens += players.size;
+                                        if (index === room.passIndex)
+                                            word.votes += [...room[room.teamTurn]].length - usedTokens;
+                                        votedWords.push(word);
+                                    });
+                                } else {
+                                    votedWords = room.crowdTokens.map((votes, index) => ({
+                                        votes, index
+                                    }));
+                                }
                                 const
-                                    sorted = votedWords.reverse().sort((a, b) => b.votes - a.votes),
+                                    sorted = votedWords.sort((a, b) => b.votes - a.votes),
                                     mostVoted = sorted && sorted[0] && (!sorted[1] || (sorted[0].votes > sorted[1].votes));
                                 chooseWord(mostVoted ? sorted[0].index : room.passIndex);
+
                             }
                         } else time = new Date();
                     }, 100);
@@ -317,6 +352,8 @@ function init(wsServer, path) {
                     }
                     room.tokenCountdown = null;
                     room.playerTokens = [];
+                    room.crowdTokens = [];
+                    state.tokenPerPlayer = {};
                     update();
                     send(room.onlinePlayers, "highlight-word", {index});
                 },
@@ -352,21 +389,68 @@ function init(wsServer, path) {
                             send(user, "masterKey", {key: null, traitor: null});
                     }
                 },
+                getAllPlayers = () => {
+                    let players = [];
+                    players = players.concat([...room.red]);
+                    players = players.concat([...room.blu]);
+                    players = players.concat([...room.grn]);
+                    if (room.redMaster)
+                        players.push(room.redMaster);
+                    if (room.bluMaster)
+                        players.push(room.bluMaster);
+                    if (room.grnMaster)
+                        players.push(room.grnMaster);
+                    return players;
+                },
+                isUserTurn = (user) => {
+                    if (!room.crowdMode)
+                        return (room.red.has(user) && room.teamTurn === "red")
+                            || (room.blu.has(user) && room.teamTurn === "blu")
+                            || (room.grn.has(user) && room.teamTurn === "grn");
+                    else
+                        return (state.redCrowdPlayers.has(user) && room.teamTurn === "red")
+                            || (state.bluCrowdPlayers.has(user) && room.teamTurn === "blu")
+                            || (state.grnCrowdPlayers.has(user) && room.teamTurn === "grn");
+                },
                 userJoin = (data) => {
                     const user = data.userId;
-                    if (!room.playerNames[user])
-                        room.spectators.add(user);
                     room.onlinePlayers.add(user);
-                    room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
-                    room.playerColors[user] = data.userColor || room.playerColors[user] || randomColor();
-                    sendMasterKey(user);
+                    if (data.masterToken === state.masterToken)
+                        room.masterPlayers.add(user);
+                    if (!room.crowdMode || room.masterPlayers.has(user)) {
+                        if (!room.playerNames[user])
+                            joinSpectators(user, true);
+                        sendMasterKey(user);
+                        room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
+                        room.playerColors[user] = data.userColor || room.playerColors[user] || randomColor();
+                    } else {
+                        let playerHasTeam = false;
+                        ["red", "blu", "grn"].forEach((color) => {
+                            if (state[`${color}CrowdPlayers`].has(user)) {
+                                playerHasTeam = true;
+                                room[`${color}Crowd`]++;
+                                send(user, "crowd-joined", color);
+                            }
+                        });
+                        if (!playerHasTeam)
+                            joinSpectators(user, true);
+                    }
                     update();
+                    if (room.crowdMode && room.hostId === user)
+                        send(user, "master-token", state.masterToken);
                 },
                 userLeft = (user) => {
                     room.onlinePlayers.delete(user);
                     if (room.spectators.has(user))
                         delete room.playerNames[user];
                     room.spectators.delete(user);
+                    state.spectatorsCrowdPlayers.delete(user);
+                    room.spectatorsCrowd = state.spectatorsCrowdPlayers.size;
+                    if (room.crowdMode && !room.masterPlayers.has(user))
+                        ["red", "blu", "grn"].forEach((color) => {
+                            if (state[`${color}CrowdPlayers`].has(user))
+                                room[`${color}Crowd`]--;
+                        });
                     if (room.onlinePlayers.size === 0) {
                         clearInterval(intervals.team);
                         clearInterval(intervals.move);
@@ -389,22 +473,36 @@ function init(wsServer, path) {
             this.userEvent = userEvent;
             this.eventHandlers = {
                 "word-click": (user, wordIndex) => {
-                    if (room.hasCommand && ((room.red.has(user) && room.teamTurn === "red")
-                        || (room.blu.has(user) && room.teamTurn === "blu")
-                        || (room.grn.has(user) && room.teamTurn === "grn")) && !room.key[wordIndex]) {
-                        room.playerTokens[wordIndex] = room.playerTokens[wordIndex] || new JSONSet();
-                        [...room.playerTokens].forEach(
-                            (players, index) => index !== wordIndex
-                                && players
-                                && players.delete(user)
-                                && tokenChanged(index)
-                        );
-                        if (!room.playerTokens[wordIndex].delete(user))
-                            room.playerTokens[wordIndex].add(user);
-                        tokenChanged(wordIndex);
+                    if (room.hasCommand && isUserTurn(user) && !room.key[wordIndex]) {
+                        if (!room.crowdMode) {
+                            room.playerTokens[wordIndex] = room.playerTokens[wordIndex] || new JSONSet();
+                            if (state.tokenPerPlayer[user] != null) {
+                                room.playerTokens[state.tokenPerPlayer[user]].delete(user);
+                                tokenChanged(state.tokenPerPlayer[user]);
+                            }
+                            if (state.tokenPerPlayer[user] !== wordIndex) {
+                                room.playerTokens[wordIndex].add(user);
+                                state.tokenPerPlayer[user] = wordIndex;
+                                tokenChanged(wordIndex);
+                            } else
+                                delete state.tokenPerPlayer[user];
+                        } else {
+                            room.crowdTokens[wordIndex] = room.crowdTokens[wordIndex] || 0;
+                            if (state.tokenPerPlayer[user] != null) {
+                                room.crowdTokens[state.tokenPerPlayer[user]]--;
+                            }
+                            if (state.tokenPerPlayer[user] !== wordIndex) {
+                                room.crowdTokens[wordIndex]++;
+                                state.tokenPerPlayer[user] = wordIndex;
+                                if ([...state[`${room.teamTurn}CrowdPlayers`]]
+                                    .filter(user => room.onlinePlayers.has(user)).length === room.crowdTokens[wordIndex])
+                                    chooseWord(wordIndex);
+                            } else
+                                delete state.tokenPerPlayer[user];
+                        }
                         update();
                     }
-                    if (room.red.has(user) || room.blu.has(user) || room.grn.has(user))
+                    if (!room.crowdMode && (room.red.has(user) || room.blu.has(user) || room.grn.has(user)))
                         send(room.onlinePlayers, "highlight-word", {index: wordIndex, user});
                 },
                 "change-color": (user) => {
@@ -555,16 +653,7 @@ function init(wsServer, path) {
                 },
                 "shuffle-players": (user) => {
                     if (user === room.hostId) {
-                        let players = [];
-                        players = players.concat([...room.red]);
-                        players = players.concat([...room.blu]);
-                        players = players.concat([...room.grn]);
-                        if (room.redMaster)
-                            players.push(room.redMaster);
-                        if (room.bluMaster)
-                            players.push(room.bluMaster);
-                        if (room.grnMaster)
-                            players.push(room.grnMaster);
+                        const players = getAllPlayers();
                         shuffleArray(players);
                         room.redMaster = players.shift() || null;
                         room.bluMaster = players.shift() || null;
@@ -582,9 +671,27 @@ function init(wsServer, path) {
                         update();
                     }
                 },
+                "enable-crowd-mode": (user) => {
+                    if (user === room.hostId && !room.crowdMode) {
+                        room.crowdMode = true;
+                        room.masterPlayers = new JSONSet(getAllPlayers().concat([...room.spectators]));
+                        [...room.red].forEach(joinSpectators);
+                        [...room.blu].forEach(joinSpectators);
+                        [...room.grn].forEach(joinSpectators);
+                        room.teamTime = 10;
+                        room.addTime = 6;
+                        room.teamsLocked = false;
+                        room.timed = true;
+                        state.masterToken = userRegistry.registry.makeId();
+                        send(user, "master-token", state.masterToken);
+                        startGame();
+                        update();
+                    }
+                },
                 "give-host": (user, playerId) => {
                     if (playerId && user === room.hostId) {
                         room.hostId = playerId;
+                        send(playerId, "master-token", state.masterToken);
                         this.emit("host-changed", user, playerId);
                     }
                     update();
@@ -592,9 +699,19 @@ function init(wsServer, path) {
                 "team-join": (user, color, isMaster) => {
                     if (!room.teamsLocked && (color === "red" || color === "blu" || (room.triMode && color === "grn"))) {
                         if (!isMaster) {
+                            if (room.crowdMode && (room.masterPlayers.has(user)
+                                || (!state.spectatorsCrowdPlayers.has(user) && room.teamWin === null)))
+                                return;
                             leaveTeams(user);
-                            room[color].add(user)
+                            if (room.crowdMode) {
+                                room[`${color}Crowd`]++;
+                                state[`${color}CrowdPlayers`].add(user);
+                                send(user, "crowd-joined", color);
+                            } else
+                                room[color].add(user);
                         } else if (!room[`${color}Master`]) {
+                            if (room.crowdMode && !room.masterPlayers.has(user))
+                                return;
                             leaveTeams(user);
                             room[`${color}Master`] = user;
                         }
@@ -603,6 +720,8 @@ function init(wsServer, path) {
                     }
                 },
                 "spectators-join": (user) => {
+                    if (room.crowdMode && !room.masterPlayers.has(user) && room.teamWin === null)
+                        return;
                     joinSpectators(user);
                     update();
                 }
@@ -640,7 +759,13 @@ function init(wsServer, path) {
             this.room.red = new JSONSet(this.room.red);
             this.room.blu = new JSONSet(this.room.blu);
             this.room.grn = new JSONSet(this.room.grn);
+            this.state.redCrowdPlayers = new JSONSet(this.state.redCrowdPlayers);
+            this.state.bluCrowdPlayers = new JSONSet(this.state.bluCrowdPlayers);
+            this.state.grnCrowdPlayers = new JSONSet(this.state.grnCrowdPlayers);
+            this.state.spectatorsCrowdPlayers = new JSONSet(this.state.spectatorsCrowdPlayers);
             this.room.playerTokens = [];
+            this.room.crowdTokens = [];
+            this.state.tokenPerPlayer = {};
             this.room.onlinePlayers.clear();
         }
     }

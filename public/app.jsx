@@ -44,11 +44,21 @@ class Words extends React.Component {
                                                  style={{background: data.playerColors[player]}}/>)
                                     )}
                                 </div>
+                                {data.crowdTokens[index] ? <div className="crowd-tokens">
+                                    {data.crowdTokens[index]}
+                                </div> : ""}
                                 <div className={cs("token-countdown", {
-                                    active: data.tokenCountdown === index,
+                                    active: data.tokenCountdown === index || (data.crowdMode && data.crowdTokens[index]),
                                     [data.teamTurn]: true
                                 })}
-                                     style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
+                                     style={data.crowdMode && data.crowdTokens[index]
+                                         ? {
+                                             "transition-duration": "0.5s",
+                                             width: `${data.crowdTokens[index] / data[`${data.teamTurn}Crowd`] * 100}%`
+                                         }
+                                         : {
+                                             "transition-duration": `${data.tokenDelay / 1000}s`
+                                         }}/>
                             </div>
                         </div>
                     ))}
@@ -67,7 +77,7 @@ class Team extends React.Component {
             handleAddCommandClick = this.props.handleAddCommandClick,
             handlePassClick = this.props.handlePassClick,
             master = data[color + "Master"],
-            userInTeam = ~data[color].indexOf(data.userId),
+            userInTeam = !data.crowdMode ? ~data[color].indexOf(data.userId) : data.crowdJoined === color,
             passValue = data.words.length + 1,
             time = new Date(data.timed ? ((data.teamTurn === color ? data.time : (data.masterTime * 1000))) : data[`${color}Time`]) || 0,
             timeWarning = time !== 0 && time < 6000,
@@ -83,7 +93,7 @@ class Team extends React.Component {
                                        handleGiveHost={this.props.handleGiveHost}
                                        handleRemovePlayer={this.props.handleRemovePlayer}
                                        handleChangeColor={this.props.handleChangeColor}/>)
-                            : !data.teamsLocked ? (
+                            : !data.teamsLocked && (!data.crowdMode || data.masterPlayers.includes(data.userId)) ? (
                                 <div className="join-placeholder">Become master</div>) : "Nothing here"
                     }
                 </div>
@@ -96,10 +106,18 @@ class Team extends React.Component {
                                                handleChangeColor={this.props.handleChangeColor}/>)
                         )
                     }
-                    {data.teamsLocked || ~data[color].indexOf(data.userId) ? ("")
-                        : (
-                            <div className="join-placeholder" onClick={() => handleJoinClick(color)}>Join team</div>
-                        )}
+                    {(data.crowdMode && userInTeam) ? <div className="crowd-self">
+                        <div className="player-color" style={{background: color}}/>
+                        (You are here)
+                    </div> : ""}
+                    {(data[`${color}Crowd`] - (userInTeam ? 1 : 0)) ?
+                        <div
+                            className="crowd">{userInTeam ? "+" : ""}{data[`${color}Crowd`] - (userInTeam ? 1 : 0)} players</div> : ""}
+                    {data.teamsLocked || ~data[color].indexOf(data.userId)
+                    || (data.crowdMode && (data.masterPlayers.includes(data.userId)
+                        || (data.crowdJoined && (data.crowdJoined === color || !data.teamWin))))
+                        ? ""
+                        : (<div className="join-placeholder" onClick={() => handleJoinClick(color)}>Join team</div>)}
                 </div>
                 {data[`${color}Count`] !== null ? (
                     <div className={cs("cards-count", {"big-number": data[`${color}Count`] > 9})}>
@@ -111,7 +129,7 @@ class Team extends React.Component {
                         <div className="commands-title">
                             Log
                             <div className={cs("timer", {
-                                critical: isTeamTurn && data.timed && timeWarning && (data.masterAdditionalTime || data.hasCommand),
+                                critical: isTeamTurn && data.timed && timeWarning && (data.masterAdditionalTime || data.hasCommand) && !data.crowdMode,
                                 additional: isTeamTurn && data.timed && !data.hasCommand && (data.masterAdditionalTime || timeWarning)
                             })}>
                                 <span className="timer-time">
@@ -142,8 +160,11 @@ class Team extends React.Component {
                         <div className="add-command-button" onClick={() => handleAddCommandClick(color)}>+</div>
                     </div>
                 ) : ""}
-                {userInTeam && data.hasCommand && data.teamTurn === color && data.userId !== master ? (
-                    <div className="pass-button" onClick={() => handlePassClick(passValue)}>
+                {data.hasCommand && data.teamTurn === color ? (
+                    <div className={cs({
+                        "pass-button": true,
+                        active: data.userId !== master && userInTeam
+                    })} onClick={() => handlePassClick(passValue)}>
                         <div className="pass-button-title">End turn</div>
                         <div className="player-tokens">
                             {data.playerTokens[passValue] && data.playerTokens[passValue].filter(player => player).map(
@@ -151,9 +172,21 @@ class Team extends React.Component {
                                     <div className="player-token" style={{background: data.playerColors[player]}}/>)
                             )}
                         </div>
-                        <div
-                            className={cs("token-countdown", data.teamTurn, {active: data.tokenCountdown === passValue && data.teamTurn === color})}
-                            style={{"transition-duration": `${data.tokenDelay / 1000}s`}}/>
+                        {data.crowdTokens[passValue] ? <div className="crowd-tokens">
+                            {data.crowdTokens[passValue]}
+                        </div> : ""}
+                        <div className={cs("token-countdown", `turn-${color}`, {
+                            active: data.teamTurn === color && (data.tokenCountdown === passValue || (data.crowdMode && data.crowdTokens[passValue])),
+                            [data.teamTurn]: true
+                        })}
+                             style={data.crowdMode && data.crowdTokens[passValue]
+                                 ? {
+                                     "transition-duration": "0.5s",
+                                     width: `${data.crowdTokens[passValue] / data[`${data.teamTurn}Crowd`] * 100}%`
+                                 }
+                                 : {
+                                     "transition-duration": `${data.tokenDelay / 1000}s`
+                                 }}/>
                     </div>
                 ) : ""}
             </div>
@@ -225,8 +258,9 @@ class Spectators extends React.Component {
                                                     handleChangeColor={this.props.handleChangeColor}
                                                     handleRemovePlayer={this.props.handleRemovePlayer}
                                                     handleGiveHost={this.props.handleGiveHost}/>)
-                    ) : " ..."
+                    ) : (!data.crowdMode || data.masterPlayers.includes(data.userId) ? " ..." : "")
                 }
+                {data.spectatorsCrowd ? <span className="crowd">&nbsp;{data.spectatorsCrowd} players</span> : ""}
             </div>
         );
     }
@@ -238,7 +272,7 @@ class Game extends React.Component {
         if (!parseInt(localStorage.darkThemeCodenames))
             document.body.classList.add("dark-theme");
         if (!localStorage.codenamesUserId || !localStorage.codenamesUserToken) {
-            while (!localStorage.userName)
+            while (!location.hash.includes("crowd=1") && !localStorage.userName)
                 localStorage.userName = prompt("Your name");
             localStorage.codenamesUserId = makeId();
             localStorage.codenamesUserToken = makeId();
@@ -251,7 +285,10 @@ class Game extends React.Component {
             initArgs.acceptDelete = localStorage.acceptDelete;
             delete localStorage.acceptDelete;
         }
-        initArgs.roomId = location.hash.substr(1);
+        if (location.hash.includes("masterKey"))
+            initArgs.masterToken = location.hash.substr(location.hash.indexOf("masterKey=") + 10);
+        initArgs.roomId = location.hash.substr(1, ~location.hash.indexOf("?")
+            ? (location.hash.indexOf("?") - 1) : undefined);
         initArgs.userId = this.userId = localStorage.codenamesUserId;
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.codenamesUserToken;
@@ -260,6 +297,8 @@ class Game extends React.Component {
         this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
             state.showWatermark = state.teamWin !== null;
+            if (this.state.inited && !this.state.crowdMode && state.crowdMode)
+                location.hash = `${location.hash}?crowd=1`;
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
                 this.chimeSound.play();
             if (!this.state || !this.state.paused && state.cardSet && state.paused)
@@ -271,7 +310,8 @@ class Game extends React.Component {
                     userId: this.userId,
                     masterKey: this.state.masterKey,
                     masterTraitor: this.state.masterTraitor,
-                    customConfig: this.customConfig
+                    customConfig: this.customConfig,
+                    roomId: initArgs.roomId
                 }, state),
                 () => this.customConfig && this.configureCardSetInputs());
             if (this.state.playerColors[this.userId])
@@ -285,8 +325,18 @@ class Game extends React.Component {
                 customConfig: this.customConfig
             }));
         });
+        this.socket.on("crowd-joined", (color) => {
+            this.setState(Object.assign({}, this.state, {
+                crowdJoined: color
+            }));
+        });
         this.socket.on("message", text => {
             popup.alert({content: text});
+        });
+        this.socket.on("master-token", (token) => {
+            this.setState(Object.assign({}, this.state, {
+                masterPlayersLink: token
+            }));
         });
         window.socket.on("disconnect", (event) => {
             this.setState({
@@ -464,6 +514,14 @@ class Game extends React.Component {
             restart();
     }
 
+    handleClickShowCrowdMenu(state) {
+        this.setState(Object.assign(this.state, {showCrowdMenu: state}));
+    }
+
+    handleClickEnableCrowdMode() {
+        this.socket.emit("enable-crowd-mode");
+    }
+
     handleToggleWords(level) {
         this.socket.emit("toggle-words-level", level);
     }
@@ -585,7 +643,7 @@ class Game extends React.Component {
                 isHost = data.hostId === data.userId,
                 isMaster = data.bluMaster === data.userId || data.redMaster === data.userId || data.grnMaster === data.userId,
                 inProcess = data.words.length > 0 && data.teamWin === null && !data.paused,
-                parentDir = location.pathname.match(/(.+?)\//)[1];
+                pageLink = `${location.origin}${location.pathname}#${this.state.roomId}`;
             if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || data.grnCommands.length !== 0 || (data.masterFirstTime !== 0 && data.words.length)) && !data.teamWin) {
                 let timeStart = new Date();
                 this.timerTimeout = setTimeout(() => {
@@ -595,7 +653,10 @@ class Game extends React.Component {
                         this.setState(Object.assign({}, this.state, this.state.timed
                             ? {time: time}
                             : {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
-                        if (this.state.timed && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0) && !parseInt(localStorage.muteSounds))
+                        if (this.state.timed
+                            && (!this.state.crowdMode || !this.state.hasCommand)
+                            && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0)
+                            && !parseInt(localStorage.muteSounds))
                             this.timerSound.play();
                     }
                 }, 100);
@@ -608,7 +669,9 @@ class Game extends React.Component {
                         paused: this.state.paused,
                         "big-mode": this.state.bigMode,
                         "tri-mode": this.state.triMode,
-                        pictures: this.state.modeStarted === "pic"
+                        pictures: this.state.modeStarted === "pic",
+                        "crowd-mode": this.state.crowdMode,
+                        [`turn-${data.teamTurn}`]: true
                     })}
                      onMouseUp={() => this.handleWordRelease()}>
                     <div className={cs("game-board", {active: this.state.inited, isMaster, teamsLocked: data.team})}>
@@ -631,7 +694,11 @@ class Game extends React.Component {
                                    handleWordPress={index => this.handleWordPress(index)}/>
                         </div>
                         <div
-                            className={cs("spectators-section", {active: data.spectators.length > 0 || !data.teamsLocked})}>
+                            className={cs("spectators-section", {
+                                active: !data.crowdMode
+                                    ? data.spectators.length > 0 || !data.teamsLocked
+                                    : data.masterPlayers.includes(data.userId) || data.spectatorsCrowd || data.spectators.length > 0
+                            })}>
                             <Spectators data={this.state}
                                         handleSpectatorsClick={() => this.handleSpectatorsClick()}
                                         handleChangeColor={() => this.handleChangeColor()}
@@ -864,6 +931,11 @@ class Game extends React.Component {
                                 {this.state.userId === this.state.hostId ?
                                     <i onClick={() => this.socket.emit("set-room-mode", false)}
                                        className="material-icons exit settings-button">store</i> : ""}
+                                {(isHost) ?
+                                    (<i onClick={() => this.handleClickShowCrowdMenu(true)}
+                                        className="material-icons start-game settings-button">{
+                                        data.crowdMode ? "people" : "people_outline"
+                                    }</i>) : ""}
                                 {(isHost && !inProcess && data.words.length > 0) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
@@ -872,7 +944,7 @@ class Game extends React.Component {
                                           className="material-icons start-game settings-button">play_arrow</i>)
                                     : (<i onClick={() => this.handleClickTogglePause()}
                                           className="material-icons start-game settings-button">pause</i>)) : ""}
-                                {isHost ? (data.teamsLocked
+                                {isHost && !data.crowdMode ? (data.teamsLocked
                                     ? (<i onClick={() => this.handleToggleTeamLockClick()}
                                           className="material-icons start-game settings-button">lock_outline</i>)
                                     : (<i onClick={() => this.handleToggleTeamLockClick()}
@@ -893,6 +965,44 @@ class Game extends React.Component {
                             <i className="settings-hover-button material-icons">settings</i>
                         </div>
                         <CommonRoom state={this.state} app={this}/>
+                        {this.state.showCrowdMenu ? <div className="crowd-menu-wrapper">
+                            <div className="crowd-menu panel">
+                                <div className="crowd-menu-title">
+                                    Режим игры со зрителями
+                                    <span className="crowd-menu-close">
+                                        <i onClick={() => this.handleClickShowCrowdMenu(false)}
+                                           className="material-icons">close</i>
+                                    </span>
+                                </div>
+                                <p>
+                                    Подходит для игр на стримах.
+                                    Играющие делятся на ведущих и зрителей.
+                                    В этом режиме только ведущие могут загадывать шифр,
+                                    который зрителям необходимо найти на поле.
+                                    Никнеймы зрителей в данном режиме не отображаются.
+                                </p>
+                                Ссылка для зрителей (отображается в адресной строке):
+                                <div className="crowd-link">
+                                    {this.state.masterPlayersLink
+                                        ? <a href={`${pageLink}?crowd=1`}>{`${pageLink}?crowd=1`}</a>
+                                        : "Режим ещё не активен"}</div>
+                                Ссылка для ведущих (не показывайте её зрителям):
+                                <div className="crowd-link">{this.state.masterPlayersLink
+                                    ?
+                                    <a href={`${pageLink}?masterKey=${this.state.masterPlayersLink}`}>{`${pageLink}?masterKey=${this.state.masterPlayersLink}`}</a>
+                                    : "Режим ещё не активен"}</div>
+                                Будучи активированным, режим больше не отключается.
+                                <br/>
+                                Нажав <i className="crowd-icon material-icons">people_outline</i>, вы снова сможете
+                                увидеть это окно
+                                <br/><br/>
+                                <div className={cs("crowd-menu-button panel-accent", {
+                                    disabled: this.state.crowdMode
+                                })} onClick={() => this.handleClickEnableCrowdMode()}>
+                                    {!this.state.crowdMode ? "Активировать" : "Активирован"}
+                                </div>
+                            </div>
+                        </div> : ""}
                     </div>
                 </div>
             );
