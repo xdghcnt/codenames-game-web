@@ -697,7 +697,7 @@ class Game extends React.Component {
                             className={cs("spectators-section", {
                                 active: !data.crowdMode
                                     ? data.spectators.length > 0 || !data.teamsLocked
-                                    : data.masterPlayers.includes(data.userId) || data.spectatorsCrowd || data.spectators.length > 0
+                                    : data.masterPlayers.includes(data.userId) || data.spectatorsCrowd || data.spectators.length > 0 || data.teamWin
                             })}>
                             <Spectators data={this.state}
                                         handleSpectatorsClick={() => this.handleSpectatorsClick()}
