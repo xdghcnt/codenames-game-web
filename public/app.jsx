@@ -77,7 +77,7 @@ class Team extends React.Component {
             handleAddCommandClick = this.props.handleAddCommandClick,
             handlePassClick = this.props.handlePassClick,
             master = data[color + "Master"],
-            userInTeam = !data.crowdMode ? ~data[color].indexOf(data.userId) : data.crowdJoined === color,
+            userInTeam = !data.crowdMode ? !!~data[color].indexOf(data.userId) : data.crowdJoined === color,
             passValue = data.words.length + 1,
             time = new Date(data.timed ? ((data.teamTurn === color ? data.time : (data.masterTime * 1000))) : data[`${color}Time`]) || 0,
             timeWarning = time !== 0 && time < 6000,
@@ -110,7 +110,7 @@ class Team extends React.Component {
                         <div className="player-color" style={{background: color}}/>
                         (You are here)
                     </div> : ""}
-                    {(data[`${color}Crowd`] - (userInTeam ? 1 : 0)) ?
+                    {data.crowdMode && (data[`${color}Crowd`] - (userInTeam ? 1 : 0)) ?
                         <div
                             className="crowd">{userInTeam ? "+" : ""}{data[`${color}Crowd`] - (userInTeam ? 1 : 0)} players</div> : ""}
                     {data.teamsLocked || ~data[color].indexOf(data.userId)
