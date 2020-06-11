@@ -112,7 +112,7 @@ function init(wsServer, path) {
                     room.playerTokens[state.tokenPerPlayer] && room.playerTokens[state.tokenPerPlayer].delete(user);
                     ["red", "blu", "grn"].forEach((color) => {
                         room[color].delete(user);
-                        if (state[`${color}CrowdPlayers`].delete(user))
+                        if (state[`${color}CrowdPlayers`].delete(user) && room[`${color}Crowd`] > 0)
                             room[`${color}Crowd`]--;
                         if (room[`${color}Master`] === user)
                             room[`${color}Master`] = null;
