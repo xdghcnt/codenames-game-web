@@ -759,6 +759,7 @@ function init(wsServer, path) {
             this.room.red = new JSONSet(this.room.red);
             this.room.blu = new JSONSet(this.room.blu);
             this.room.grn = new JSONSet(this.room.grn);
+            this.room.masterPlayers = new JSONSet(this.room.masterPlayers);
             this.state.redCrowdPlayers = new JSONSet(this.state.redCrowdPlayers);
             this.state.bluCrowdPlayers = new JSONSet(this.state.bluCrowdPlayers);
             this.state.grnCrowdPlayers = new JSONSet(this.state.grnCrowdPlayers);
