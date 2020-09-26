@@ -32,6 +32,7 @@ function init(wsServer, path) {
             super(hostId, hostData, userRegistry);
             const
                 room = {
+                    roomId: hostData.roomId,
                     inited: true,
                     hostId: hostId,
                     spectators: new JSONSet(),
@@ -88,7 +89,8 @@ function init(wsServer, path) {
                     grnCrowd: 0,
                     spectatorsCrowd: 0,
                     crowdTokens: [],
-                    masterPlayers: new JSONSet()
+                    masterPlayers: new JSONSet(),
+                    managedVoice: true
                 },
                 intervals = {};
             this.room = room;
@@ -107,7 +109,27 @@ function init(wsServer, path) {
             this.state = state;
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
-                update = () => send(room.onlinePlayers, "state", room),
+                update = () => {
+                    if (room.voiceEnabled)
+                        processUserVoice();
+                    send(room.onlinePlayers, "state", room);
+                },
+                processUserVoice = () => {
+                    room.userVoice = {};
+                    room.onlinePlayers.forEach((user) => {
+                        if (!room.managedVoice || room.teamWin || !room.teamsLocked || !state.words)
+                            room.userVoice[user] = true;
+                        else {
+                            ["red", "blu", "grn"].some((color) => {
+                                if (room[color].has(user)) {
+                                    if (room.teamTurn === color)
+                                        room.userVoice[user] = true;
+                                    return true;
+                                }
+                            });
+                        }
+                    });
+                },
                 leaveTeams = (user, keepSpectator) => {
                     room.playerTokens[state.tokenPerPlayer] && room.playerTokens[state.tokenPerPlayer].delete(user);
                     ["red", "blu", "grn"].forEach((color) => {
@@ -468,10 +490,13 @@ function init(wsServer, path) {
                         registry.log(error.message);
                     }
                 };
+
+            this.updatePublicState = update;
             this.userJoin = userJoin;
             this.userLeft = userLeft;
             this.userEvent = userEvent;
             this.eventHandlers = {
+                ...this.eventHandlers,
                 "word-click": (user, wordIndex) => {
                     if (room.hasCommand && isUserTurn(user) && !room.key[wordIndex]) {
                         if (!room.crowdMode) {

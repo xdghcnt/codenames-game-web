@@ -86,7 +86,10 @@ class Team extends React.Component {
             <div className={cs("team", color, {failed: data.teamFailed === color})}>
                 <div className="master" onClick={() => handleJoinClick(color, true)}>
                     {data.teamTurn === color ? (
-                        <span className={cs("move-arrow", {"has-command": data.hasCommand})}>➜</span>) : ""}
+                        <span className={cs("move-arrow", {
+                            "has-command": data.hasCommand,
+                            hasPlayer: !!master
+                        })}>➜</span>) : ""}
                     {
                         !!master
                             ? (<Player key={master} data={data} id={master}
@@ -203,7 +206,10 @@ class Player extends React.Component {
             <div className={cs("player", {offline: !~data.onlinePlayers.indexOf(id), self: id === data.userId})}
                  onTouchStart={(e) => e.target.focus()}
                  data-playerId={id}>
-                <div className="player-color" style={{background: data.playerColors[id]}}
+                <div className={cs(
+                    "player-color",
+                    ...UserAudioMarker.getAudioMarkerClasses(data, id)
+                )} style={{background: data.playerColors[id]}}
                      onClick={(evt) => !evt.stopPropagation() && (id === data.userId) && this.props.handleChangeColor()}/>
                 {data.playerNames[id]}
                 {((~data.traitors.indexOf(id)) || data.masterTraitor === id) ? (
@@ -268,6 +274,7 @@ class Spectators extends React.Component {
 
 class Game extends React.Component {
     componentDidMount() {
+        this.gameName = "codenames";
         const initArgs = {};
         if (!parseInt(localStorage.darkThemeCodenames))
             document.body.classList.add("dark-theme");
@@ -287,7 +294,7 @@ class Game extends React.Component {
         }
         if (location.hash.includes("masterKey"))
             initArgs.masterToken = location.hash.substr(location.hash.indexOf("masterKey=") + 10);
-        initArgs.roomId = location.hash.substr(1, ~location.hash.indexOf("?")
+        initArgs.roomId = this.roomId = location.hash.substr(1, ~location.hash.indexOf("?")
             ? (location.hash.indexOf("?") - 1) : undefined);
         initArgs.userId = this.userId = localStorage.codenamesUserId;
         initArgs.userName = localStorage.userName;

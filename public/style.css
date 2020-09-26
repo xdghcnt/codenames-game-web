@@ -643,14 +643,14 @@ body.dark-theme {
     margin-top: -2px;
 }
 
+.move-arrow.hasPlayer {
+    margin-right: 8px
+}
+
 .move-arrow.has-command {
     transform: rotate(90deg);
     display: inline-block;
     margin-right: 2px;
-}
-
-.master .player {
-    margin-left: -4px;
 }
 
 .timed .timer-time {
