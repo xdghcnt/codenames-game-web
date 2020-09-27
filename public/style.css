@@ -644,7 +644,7 @@ body.dark-theme {
 }
 
 .move-arrow.hasPlayer {
-    margin-right: 8px
+    margin-right: 2px;
 }
 
 .move-arrow.has-command {
