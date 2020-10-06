@@ -276,8 +276,6 @@ class Game extends React.Component {
     componentDidMount() {
         this.gameName = "codenames";
         const initArgs = {};
-        if (!parseInt(localStorage.darkThemeCodenames))
-            document.body.classList.add("dark-theme");
         if (!localStorage.codenamesUserId || !localStorage.codenamesUserToken) {
             while (!location.hash.includes("crowd=1") && !localStorage.userName)
                 localStorage.userName = prompt("Your name");
@@ -307,7 +305,7 @@ class Game extends React.Component {
             if (this.state.inited && !this.state.crowdMode && state.crowdMode)
                 location.hash = `${location.hash}?crowd=1`;
             if (this.state.hasCommand === false && state.hasCommand === true && !parseInt(localStorage.muteSounds))
-                this.chimeSound.play();
+                this.playSound(this.chimeSound);
             if (!this.state || !this.state.paused && state.cardSet && state.paused)
                 this.setCustomConfig();
             else if (this.state && this.state.paused && state.cardSet && !state.paused)
@@ -364,8 +362,8 @@ class Game extends React.Component {
                         volL = 1 - volR;
                     this.tapSoundL.volume = Math.max(volL, 0.2) * 0.3;
                     this.tapSoundR.volume = Math.max(volR, 0.2) * 0.3;
-                    this.tapSoundL.play();
-                    this.tapSoundR.play();
+                    this.playSound(this.tapSoundL);
+                    this.playSound(this.tapSoundR);
                 }
                 wordNode.classList.add("highlight-anim");
                 setTimeout(() => wordNode && wordNode.classList.remove("highlight-anim"), 0);
@@ -394,6 +392,10 @@ class Game extends React.Component {
         this.chimeSound.volume = 0.25;
         window.hyphenate = createHyphenator(hyphenationPatternsRu);
         window.hyphenateEn = createHyphenator(hyphenationPatternsEnUs);
+    }
+
+    playSound(elem) {
+        HostControls.playSound(elem);
     }
 
     debouncedEmit(event, data) {
@@ -477,19 +479,6 @@ class Game extends React.Component {
         });
     }
 
-    handleChangeTime(value, type) {
-        this.debouncedEmit(type, value);
-    }
-
-    handleClickChangeName() {
-        popup.prompt({content: "New name", value: this.state.playerNames[this.state.userId] || ""}, (evt) => {
-            if (evt.proceed && evt.input_value.trim()) {
-                this.socket.emit("change-name", evt.input_value.trim());
-                localStorage.userName = evt.input_value.trim();
-            }
-        });
-    }
-
     handleClickShuffle() {
         if (this.state.words.length !== 0 && !this.state.teamWin)
             popup.confirm({content: "Restart? Are you sure?"}, (evt) => evt.proceed && this.socket.emit("shuffle-players"));
@@ -537,18 +526,9 @@ class Game extends React.Component {
         this.socket.emit("toggle-words-mode");
     }
 
-    handleToggleTheme() {
-        localStorage.darkThemeCodenames = !parseInt(localStorage.darkThemeCodenames) ? 1 : 0;
-        document.body.classList.toggle("dark-theme");
-        this.setState(Object.assign({
-            userId: this.userId,
-            activeWord: this.state.activeWord
-        }, this.state));
-    }
-
     handleToggleMuteSounds() {
         localStorage.muteSounds = !parseInt(localStorage.muteSounds) ? 1 : 0;
-        this.setState(Object.assign({}, this.state));
+        this.setState(Object.assign(this.state));
     }
 
     getDefaultCardSet() {
@@ -644,7 +624,6 @@ class Game extends React.Component {
             return (<div
                 className="kicked">Disconnected{this.state.disconnectReason ? ` (${this.state.disconnectReason})` : ""}</div>);
         else if (this.state.inited) {
-            document.body.classList.add("captcha-solved");
             const
                 data = this.state,
                 isHost = data.hostId === data.userId,
@@ -664,7 +643,7 @@ class Game extends React.Component {
                             && (!this.state.crowdMode || !this.state.hasCommand)
                             && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0)
                             && !parseInt(localStorage.muteSounds))
-                            this.timerSound.play();
+                            this.playSound(this.timerSound);
                     }
                 }, 100);
             }
@@ -712,56 +691,50 @@ class Game extends React.Component {
                                         handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
                                         handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}/>
                         </div>
-                        <div className="host-controls" onTouchStart={(e) => e.target.focus()}>
-                            <div className="host-controls-menu">
-                                <div className="little-controls">
-                                    {data.timed ? (<div className="game-settings">
-                                        <div className="set-master-first-time"><i title="master first time (0 as ∞)"
-                                                                                  className="material-icons">timer</i>
-                                            {(isHost && !inProcess) ? (<input id="master-first-time"
-                                                                              type="number"
-                                                                              defaultValue={this.state.masterFirstTime}
-                                                                              min="0"
-                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                                  && this.handleChangeTime(evt.target.valueAsNumber, "set-master-first-time")}
-                                            />) : (<span className="value">{this.state.masterFirstTime || "∞"}</span>)}
-                                        </div>
-                                        <div className="set-master-time"><i title="master time"
-                                                                            className="material-icons">alarm</i>
-                                            {(isHost && !inProcess) ? (<input id="master-time"
-                                                                              type="number"
-                                                                              defaultValue={this.state.masterTime}
-                                                                              min="0"
-                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                                  && this.handleChangeTime(evt.target.valueAsNumber, "set-master-time")}
-                                            />) : (<span className="value">{this.state.masterTime}</span>)}
-                                        </div>
-                                        <div className="set-team-time"><i title="team time"
-                                                                          className="material-icons">alarm_on</i>
-                                            {(isHost && !inProcess) ? (<input id="round-time"
-                                                                              type="number"
-                                                                              defaultValue={this.state.teamTime} min="0"
-                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                                  && this.handleChangeTime(evt.target.valueAsNumber, "set-team-time")}
-                                            />) : (<span className="value">{this.state.teamTime}</span>)}
-                                        </div>
-                                        <div className="set-add-time"><i title="adding time"
-                                                                         className="material-icons">alarm_add</i>
-                                            {(isHost && !inProcess) ? (<input id="round-time"
-                                                                              type="number"
-                                                                              defaultValue={this.state.addTime} min="0"
-                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                                  && this.handleChangeTime(evt.target.valueAsNumber, "set-add-time")}
-                                            />) : (<span className="value">{this.state.addTime}</span>)}
-                                        </div>
-                                    </div>) : ""}
-                                    {(isHost && !inProcess) ? (
-                                        <div className="shuffle-players settings-button"
-                                             onClick={() => this.handleClickShuffle()}><i
-                                            title="shuffle players"
-                                            className="material-icons">casino</i>
-                                        </div>) : ""}
-                                </div>
+                        <HostControls
+                            app={this}
+                            hasDarkTheme={true}
+                            defaultDarkTheme={true}
+                            hasSound={true}
+                            data={data}
+                            topSection={(isHost && !inProcess) ? (
+                                <div className="shuffle-players settings-button"
+                                     onClick={() => this.handleClickShuffle()}><i
+                                    title="shuffle players"
+                                    className="material-icons">casino</i>
+                                </div>) : ""}
+                            timerControls={[
+                                {
+                                    title: "master first time (0 as ∞)",
+                                    field: "masterFirstTime",
+                                    min: 0,
+                                    placeHolder: "∞",
+                                    icon: "timer",
+                                    timeControl: true
+                                },
+                                {
+                                    title: "master time",
+                                    field: "masterTime",
+                                    min: 0,
+                                    icon: "alarm",
+                                    timeControl: true
+                                },
+                                {
+                                    title: "team time",
+                                    field: "teamTime",
+                                    min: 0,
+                                    icon: "alarm_on",
+                                    timeControl: true
+                                },
+                                {
+                                    title: "adding time",
+                                    field: "addTime",
+                                    min: 0,
+                                    icon: "alarm_add",
+                                    timeControl: true
+                                }
+                            ]}
+                            middleSection={<>
                                 <div className="little-controls words-level">
                                     <span className="words-level-label">Cards <span
                                         className={"words-lang" + ((isHost && !inProcess) ? " settings-button" : "")}
@@ -925,19 +898,21 @@ class Game extends React.Component {
                                         className="material-icons">settings_ethernet</i>Custom
                                     </div>
                                 </div>
-                            </div>
-                            <div className="side-buttons">
-                                <span
-                                    className={cs("start-game-buttons", "traitor-button", {
-                                        "settings-button": isHost && !inProcess,
-                                        "level-selected": this.state.traitorMode
-                                    })}
-                                    onClick={() => !inProcess && this.toggleTraitorMode()}>
+                            </>}
+                            bottomSection={<span
+                                className={cs("start-game-buttons", "traitor-button", {
+                                    "settings-button": isHost && !inProcess,
+                                    "level-selected": this.state.traitorMode
+                                })}
+                                onClick={() => !inProcess && this.toggleTraitorMode()}>
                                         <i className="material-icons">offline_bolt</i>Traitor mode
-                                    </span>
-                                {this.state.userId === this.state.hostId ?
-                                    <i onClick={() => this.socket.emit("set-room-mode", false)}
-                                       className="material-icons exit settings-button">store</i> : ""}
+                                    </span>}
+                            inProcess={inProcess}
+                            emitEvent={(...args) => {
+                                this.socket.emit(...args)
+                            }}
+                            handleChangeParam = {(field, value) => this.socket.emit("change-param", field, value)}
+                            sideButtons={<>
                                 {(isHost) ?
                                     (<i onClick={() => this.handleClickShowCrowdMenu(true)}
                                         className="material-icons start-game settings-button">{
@@ -956,21 +931,8 @@ class Game extends React.Component {
                                           className="material-icons start-game settings-button">lock_outline</i>)
                                     : (<i onClick={() => this.handleToggleTeamLockClick()}
                                           className="material-icons start-game settings-button">lock_open</i>)) : ""}
-                                <i onClick={() => this.handleClickChangeName()}
-                                   className="toggle-theme material-icons settings-button">edit</i>
-                                {!parseInt(localStorage.muteSounds)
-                                    ? (<i onClick={() => this.handleToggleMuteSounds()}
-                                          className="toggle-theme material-icons settings-button">volume_up</i>)
-                                    : (<i onClick={() => this.handleToggleMuteSounds()}
-                                          className="toggle-theme material-icons settings-button">volume_off</i>)}
-                                {!parseInt(localStorage.darkThemeCodenames)
-                                    ? (<i onClick={() => this.handleToggleTheme()}
-                                          className="toggle-theme material-icons settings-button">brightness_2</i>)
-                                    : (<i onClick={() => this.handleToggleTheme()}
-                                          className="toggle-theme material-icons settings-button">wb_sunny</i>)}
-                            </div>
-                            <i className="settings-hover-button material-icons">settings</i>
-                        </div>
+                            </>}
+                        />
                         <CommonRoom state={this.state} app={this}/>
                         {this.state.showCrowdMenu ? <div className="crowd-menu-wrapper">
                             <div className="crowd-menu panel">

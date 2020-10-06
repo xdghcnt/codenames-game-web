@@ -604,6 +604,13 @@ function init(wsServer, path) {
                         room.masterTime = parseInt(value);
                     update();
                 },
+                "change-param": (user, field, value) => {
+                    if (user === room.hostId) {
+                        if (!isNaN(parseInt(value)) && parseInt(value) >= 0 && ["masterTime", "teamTime", "addTime", "masterFirstTime"])
+                            room[field] = parseInt(value);
+                        update();
+                    }
+                },
                 "set-master-first-time": (user, value) => {
                     if (user === room.hostId && !isNaN(parseInt(value)))
                         room.masterFirstTime = parseInt(value);
