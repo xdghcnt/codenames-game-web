@@ -553,10 +553,12 @@ class Game extends React.Component {
         const whiteCount = (this.customConfig.bigMode ? 36 : 25) - Object.keys(this.customConfig.cardSet).reduce((prev, cur) =>
             prev + (cur === "goal" ? (this.customConfig.triMode ? 3 : 2) * this.customConfig.cardSet[cur] : this.customConfig.cardSet[cur]), 0);
         Object.keys(this.customConfig.cardSet).forEach((cardType) => {
-            document.getElementById(cardType).setAttribute(
-                "max",
-                this.customConfig.cardSet[cardType] + Math.ceil(whiteCount / (cardType === "goal" ? 3 : 1))
-            );
+            const elem = document.getElementById(cardType);
+            if (elem)
+                elem.setAttribute(
+                    "max",
+                    this.customConfig.cardSet[cardType] + Math.ceil(whiteCount / (cardType === "goal" ? 3 : 1))
+                );
         });
     }
 
@@ -594,9 +596,13 @@ class Game extends React.Component {
 
     configureCardSetInputs() {
         Object.keys(this.customConfig.cardSet).forEach((cardType) => {
-            document.getElementById(cardType).value = this.customConfig.cardSet[cardType];
+            const elem = document.getElementById(cardType);
+            if (elem)
+                elem.value = this.customConfig.cardSet[cardType];
         });
-        document.getElementById("ext2").disabled = !this.customConfig.triMode;
+        const elem = document.getElementById("ext2");
+        if (elem)
+            elem.disabled = !this.customConfig.triMode;
         this.setState(Object.assign(this.state, {
             customConfig: this.customConfig
         }));
@@ -911,7 +917,7 @@ class Game extends React.Component {
                             emitEvent={(...args) => {
                                 this.socket.emit(...args)
                             }}
-                            handleChangeParam = {(field, value) => this.socket.emit("change-param", field, value)}
+                            handleChangeParam={(field, value) => this.socket.emit("change-param", field, value)}
                             sideButtons={<>
                                 {(isHost) ?
                                     (<i onClick={() => this.handleClickShowCrowdMenu(true)}
