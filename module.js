@@ -256,6 +256,7 @@ function init(wsServer, path) {
                     clearInterval(intervals.team);
                     clearInterval(intervals.move);
                     clearTimeout(intervals.token);
+                    state.traitors = {};
                     if (room.traitorMode)
                         state.traitors = {
                             blu: shuffleArray([...room.blu])[0],
