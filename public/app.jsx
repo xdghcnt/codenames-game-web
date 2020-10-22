@@ -809,7 +809,7 @@ class Game extends React.Component {
                                                                                   type="number"
                                                                                   min="1"
                                                                                   onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet.goal}</span>)}
+                                                />) : (<span className="value">{this.state.cardSet?.goal}</span>)}
                                             </div>
                                             <div className="card-set-black"><i title="black cards"
                                                                                className="material-icons">stop</i>
@@ -817,7 +817,7 @@ class Game extends React.Component {
                                                                                   type="number"
                                                                                   min="0"
                                                                                   onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet.black}</span>)}
+                                                />) : (<span className="value">{this.state.cardSet?.black}</span>)}
                                             </div>
                                             <div className="card-set-ext1"><i title="extra cards for 1st team"
                                                                               className="material-icons">looks_one</i>
@@ -825,7 +825,7 @@ class Game extends React.Component {
                                                                                   type="number"
                                                                                   min="0"
                                                                                   onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet.ext1}</span>)}
+                                                />) : (<span className="value">{this.state.cardSet?.ext1}</span>)}
                                             </div>
                                             <div
                                                 className={cs("card-set-ext2", {disabled: this.customConfig ? !this.customConfig.triMode : !this.state.triMode})}>
@@ -835,7 +835,7 @@ class Game extends React.Component {
                                                                                   type="number"
                                                                                   min="0"
                                                                                   onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet.ext2}</span>)}
+                                                />) : (<span className="value">{this.state.cardSet?.ext2}</span>)}
                                             </div>
                                             {(isHost && !inProcess && data.words.length > 0) ?
                                                 (<i onClick={() => this.handleClickRestart()}
