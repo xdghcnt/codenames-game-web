@@ -10,6 +10,7 @@ function makeId() {
     return text;
 }
 
+
 class Words extends React.Component {
     render() {
         const
@@ -622,6 +623,13 @@ class Game extends React.Component {
 
     toggleTraitorMode() {
         this.socket.emit("toggle-traitor-mode");
+    }
+
+    getGuide() {
+        return `<p>
+                    Переключить набор карточек на картинки или другие сложности слов можно нажав здесь 
+                    <img src="/codenames/guide-dict.png" style="height: 28px; vertical-align: middle; margin: 2px;">
+                </p>`;
     }
 
     render() {

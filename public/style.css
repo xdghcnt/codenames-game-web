@@ -788,14 +788,12 @@ body {
         top: auto;
     }
 
-    .room-main-link {
-        top: initial;
-        bottom: 33px;
-        right: 40px;
-        left: initial;
+    .host-controls {
+        top: 0;
+        bottom: auto;
     }
 
-    .donate-menu {
+    .room-menu {
         top: initial;
         bottom: 33px;
         right: 0;
@@ -815,6 +813,16 @@ body {
         flex-grow: 1;
         min-height: 200px;
         order: 0 !important;
+        width: 50%;
+    }
+
+    .tri-mode .team {
+        width: 33%;
+    }
+
+    .tri-mode .team.red {
+        border-right: #ff6450 2px solid;
+        border-left: none;
     }
 
     .words-wrap {
@@ -879,6 +887,27 @@ body {
     .big-mode .cards-count {
         top: -42px;
         right: 5px;
+    }
+
+    .big-mode .host-controls {
+        top: 0;
+        bottom: auto;
+    }
+
+    .big-mode.tri-mode .team.red {
+        border-right: #ff6450 2px solid;
+        border-left: none;
+    }
+
+    .big-mode .room-menu {
+        top: initial;
+        bottom: 33px;
+        right: 0;
+        left: initial;
+    }
+    .big-mode .spectators-section {
+        bottom: 0;
+        top: auto;
     }
 
     .big-mode .host-controls {
