@@ -600,22 +600,15 @@ function init(wsServer, path) {
                         room.traitorMode = !room.traitorMode;
                     update();
                 },
-                "set-master-time": (user, value) => {
-                    if (user === room.hostId && parseInt(value))
-                        room.masterTime = parseInt(value);
-                    update();
-                },
                 "change-param": (user, field, value) => {
                     if (user === room.hostId) {
-                        if (!isNaN(parseInt(value)) && parseInt(value) >= 0 && ["masterTime", "teamTime", "addTime", "masterFirstTime"])
+                        if (!isNaN(parseInt(value)) && parseInt(value) >= 0 && ["masterTime", "teamTime", "addTime", "masterFirstTime"]) {
                             room[field] = parseInt(value);
+                            if (field === "masterFirstTime")
+                                startMasterTimer(true);
+                        }
                         update();
                     }
-                },
-                "set-master-first-time": (user, value) => {
-                    if (user === room.hostId && !isNaN(parseInt(value)))
-                        room.masterFirstTime = parseInt(value);
-                    update();
                 },
                 "set-team-time": (user, value) => {
                     if (user === room.hostId && parseInt(value))
