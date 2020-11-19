@@ -302,7 +302,7 @@ class Game extends React.Component {
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.codenamesUserToken;
         initArgs.userColor = localStorage.codeNamesUserColor;
-        initArgs.wssToken = window.wssToken + "heh";
+        initArgs.wssToken = window.wssToken;
         this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
             state.showWatermark = state.teamWin !== null;
