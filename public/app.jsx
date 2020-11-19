@@ -302,7 +302,7 @@ class Game extends React.Component {
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.codenamesUserToken;
         initArgs.userColor = localStorage.codeNamesUserColor;
-        initArgs.wssToken = window.wssToken;
+        initArgs.wssToken = window.wssToken + "heh";
         this.socket = window.socket.of("codenames");
         this.socket.on("state", state => {
             state.showWatermark = state.teamWin !== null;
@@ -378,7 +378,8 @@ class Game extends React.Component {
                 setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 0);
             }
         });
-        this.socket.on("prompt-delete-prev-room", (roomList) => {
+        this.socket.on("promp" +
+            "t-delete-prev-room", (roomList) => {
             if (localStorage.acceptDelete =
                 prompt(`Limit for hosting rooms per IP was reached: ${roomList.join(", ")}. Delete one of rooms?`, roomList[0]))
                 location.reload();
@@ -390,8 +391,8 @@ class Game extends React.Component {
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("/codenames/timer-beep.mp3");
         this.timerSound.volume = 0.5;
-        this.tapSoundL = new Audio("/codenames/tap_l.ogg");
-        this.tapSoundR = new Audio("/codenames/tap_r.ogg");
+        this.tapSoundL = new Audio("/codenames/tap_l.mp3");
+        this.tapSoundR = new Audio("/codenames/tap_r.mp3");
         this.chimeSound = new Audio("/codenames/chime.mp3");
         this.chimeSound.volume = 0.25;
         window.hyphenate = createHyphenator(hyphenationPatternsRu);
