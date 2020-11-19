@@ -590,9 +590,11 @@ class Game extends React.Component {
     }
 
     handleSetTriMode(state) {
-        this.customConfig.triMode = state;
-        this.customConfig.cardSet = this.getDefaultCardSet();
-        this.configureCardSetInputs();
+        if (this.customConfig) {
+            this.customConfig.triMode = state;
+            this.customConfig.cardSet = this.getDefaultCardSet();
+            this.configureCardSetInputs();
+        }
     }
 
     configureCardSetInputs() {
@@ -633,223 +635,224 @@ class Game extends React.Component {
     }
 
     render() {
-        clearTimeout(this.timerTimeout);
-        if (this.state.disconnected)
-            return (<div
-                className="kicked">Disconnected{this.state.disconnectReason ? ` (${this.state.disconnectReason})` : ""}</div>);
-        else if (this.state.inited) {
-            const
+            clearTimeout(this.timerTimeout);
+            if (this.state.disconnected)
+                return (<div
+                    className="kicked">Disconnected{this.state.disconnectReason ? ` (${this.state.disconnectReason})` : ""}</div>);
+            else if (this.state.inited) {
+                const
                 data = this.state,
-                isHost = data.hostId === data.userId,
-                isMaster = data.bluMaster === data.userId || data.redMaster === data.userId || data.grnMaster === data.userId,
-                inProcess = data.words.length > 0 && data.teamWin === null && !data.paused,
-                pageLink = `${location.origin}${location.pathname}#${this.state.roomId}`;
-            if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || data.grnCommands.length !== 0 || (data.masterFirstTime !== 0 && data.words.length)) && !data.teamWin) {
-                let timeStart = new Date();
-                this.timerTimeout = setTimeout(() => {
-                    if (!this.state.paused) {
-                        let prevTime = this.state.time,
-                            time = prevTime - (new Date - timeStart);
-                        this.setState(Object.assign({}, this.state, this.state.timed
-                            ? {time: time}
-                            : {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
-                        if (this.state.timed
-                            && (!this.state.crowdMode || !this.state.hasCommand)
-                            && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0)
-                            && !parseInt(localStorage.muteSounds))
-                            this.playSound(this.timerSound);
-                    }
-                }, 100);
-            }
-            return (
-                <div className={cs("game",
-                    {
-                        [`${this.state.teamWin}-win`]: this.state.teamWin,
-                        timed: this.state.timed,
-                        paused: this.state.paused,
-                        "big-mode": this.state.bigMode,
-                        "tri-mode": this.state.triMode,
-                        pictures: this.state.modeStarted === "pic",
-                        "crowd-mode": this.state.crowdMode,
-                        [`turn-${data.teamTurn}`]: true
-                    })}
-                     onMouseUp={() => this.handleWordRelease()}>
-                    <div className={cs("game-board", {active: this.state.inited, isMaster, teamsLocked: data.team})}>
-                        <div className="main-row">
-                            {(!data.triMode ? ["red", "blu"] : ["red", "blu", "grn"]).map(color => (
-                                <Team
-                                    color={color}
-                                    data={data}
-                                    handleJoinClick={(color, isMaster) => this.handleJoinClick(color, isMaster)}
-                                    handleAddCommandClick={(color) => this.handleAddCommandClick(color)}
-                                    handleChangeColor={() => this.handleChangeColor()}
-                                    handlePassClick={(value) => this.handleWordClick(value)}
-                                    handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
-                                    handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
-                                    handleEditCommand={(command, index, color, evt) => this.handleEditCommand(command, index, color, evt)}
-                                />
-                            ))}
-                            <Words data={data}
-                                   handleWordClick={index => this.handleWordClick(index)}
-                                   handleWordPress={index => this.handleWordPress(index)}/>
-                        </div>
+                    isHost = data.hostId === data.userId,
+                    isMaster = data.bluMaster === data.userId || data.redMaster === data.userId || data.grnMaster === data.userId,
+                    inProcess = data.words.length > 0 && data.teamWin === null && !data.paused,
+                    pageLink = `${location.origin}${location.pathname}#${this.state.roomId}`;
+                if ((data.redCommands.length !== 0 || data.bluCommands.length !== 0 || data.grnCommands.length !== 0 || (data.masterFirstTime !== 0 && data.words.length)) && !data.teamWin) {
+                    let timeStart = new Date();
+                    this.timerTimeout = setTimeout(() => {
+                        if (!this.state.paused) {
+                            let prevTime = this.state.time,
+                                time = prevTime - (new Date - timeStart);
+                            this.setState(Object.assign({}, this.state, this.state.timed
+                                ? {time: time}
+                                : {[`${data.teamTurn}Time`]: this.state[`${data.teamTurn}Time`] + (new Date() - timeStart)}));
+                            if (this.state.timed
+                                && (!this.state.crowdMode || !this.state.hasCommand)
+                                && time < 6000 && ((Math.floor(prevTime / 1000) - Math.floor(time / 1000)) > 0)
+                                && !parseInt(localStorage.muteSounds))
+                                this.playSound(this.timerSound);
+                        }
+                    }, 100);
+                }
+                return (
+                    <div className={cs("game",
+                        {
+                            [`${this.state.teamWin}-win`]: this.state.teamWin,
+                            timed: this.state.timed,
+                            paused: this.state.paused,
+                            "big-mode": this.state.bigMode,
+                            "tri-mode": this.state.triMode,
+                            pictures: this.state.modeStarted === "pic",
+                            "crowd-mode": this.state.crowdMode,
+                            [`turn-${data.teamTurn}`]: true
+                        })}
+                         onMouseUp={() => this.handleWordRelease()}>
                         <div
-                            className={cs("spectators-section", {
-                                active: !data.crowdMode
-                                    ? data.spectators.length > 0 || !data.teamsLocked
-                                    : data.masterPlayers.includes(data.userId) || data.spectatorsCrowd || data.spectators.length > 0 || data.teamWin
-                            })}>
-                            <Spectators data={this.state}
-                                        handleSpectatorsClick={() => this.handleSpectatorsClick()}
+                            className={cs("game-board", {active: this.state.inited, isMaster, teamsLocked: data.team})}>
+                            <div className="main-row">
+                                {(!data.triMode ? ["red", "blu"] : ["red", "blu", "grn"]).map(color => (
+                                    <Team
+                                        color={color}
+                                        data={data}
+                                        handleJoinClick={(color, isMaster) => this.handleJoinClick(color, isMaster)}
+                                        handleAddCommandClick={(color) => this.handleAddCommandClick(color)}
                                         handleChangeColor={() => this.handleChangeColor()}
+                                        handlePassClick={(value) => this.handleWordClick(value)}
                                         handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
-                                        handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}/>
-                        </div>
-                        <HostControls
-                            app={this}
-                            hasDarkTheme={true}
-                            defaultDarkTheme={true}
-                            hasSound={true}
-                            data={data}
-                            topSection={(isHost && !inProcess) ? (
-                                <div className="shuffle-players settings-button"
-                                     onClick={() => this.handleClickShuffle()}><i
-                                    title="shuffle players"
-                                    className="material-icons">casino</i>
-                                </div>) : ""}
-                            timerControls={[
-                                {
-                                    title: "master first time (0 as ∞)",
-                                    field: "masterFirstTime",
-                                    min: 0,
-                                    placeHolder: "∞",
-                                    icon: "timer",
-                                    timeControl: true
-                                },
-                                {
-                                    title: "master time",
-                                    field: "masterTime",
-                                    min: 0,
-                                    icon: "alarm",
-                                    timeControl: true
-                                },
-                                {
-                                    title: "team time",
-                                    field: "teamTime",
-                                    min: 0,
-                                    icon: "alarm_on",
-                                    timeControl: true
-                                },
-                                {
-                                    title: "adding time",
-                                    field: "addTime",
-                                    min: 0,
-                                    icon: "alarm_add",
-                                    timeControl: true
-                                }
-                            ]}
-                            middleSection={<>
-                                <div className="little-controls words-level">
+                                        handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
+                                        handleEditCommand={(command, index, color, evt) => this.handleEditCommand(command, index, color, evt)}
+                                    />
+                                ))}
+                                <Words data={data}
+                                       handleWordClick={index => this.handleWordClick(index)}
+                                       handleWordPress={index => this.handleWordPress(index)}/>
+                            </div>
+                            <div
+                                className={cs("spectators-section", {
+                                    active: !data.crowdMode
+                                        ? data.spectators.length > 0 || !data.teamsLocked
+                                        : data.masterPlayers.includes(data.userId) || data.spectatorsCrowd || data.spectators.length > 0 || data.teamWin
+                                })}>
+                                <Spectators data={this.state}
+                                            handleSpectatorsClick={() => this.handleSpectatorsClick()}
+                                            handleChangeColor={() => this.handleChangeColor()}
+                                            handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
+                                            handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}/>
+                            </div>
+                            <HostControls
+                                app={this}
+                                hasDarkTheme={true}
+                                defaultDarkTheme={true}
+                                hasSound={true}
+                                data={data}
+                                topSection={(isHost && !inProcess) ? (
+                                    <div className="shuffle-players settings-button"
+                                         onClick={() => this.handleClickShuffle()}><i
+                                        title="shuffle players"
+                                        className="material-icons">casino</i>
+                                    </div>) : ""}
+                                timerControls={[
+                                    {
+                                        title: "master first time (0 as ∞)",
+                                        field: "masterFirstTime",
+                                        min: 0,
+                                        placeHolder: "∞",
+                                        icon: "timer",
+                                        timeControl: true
+                                    },
+                                    {
+                                        title: "master time",
+                                        field: "masterTime",
+                                        min: 0,
+                                        icon: "alarm",
+                                        timeControl: true
+                                    },
+                                    {
+                                        title: "team time",
+                                        field: "teamTime",
+                                        min: 0,
+                                        icon: "alarm_on",
+                                        timeControl: true
+                                    },
+                                    {
+                                        title: "adding time",
+                                        field: "addTime",
+                                        min: 0,
+                                        icon: "alarm_add",
+                                        timeControl: true
+                                    }
+                                ]}
+                                middleSection={<>
+                                    <div className="little-controls words-level">
                                     <span className="words-level-label">Cards <span
                                         className={"words-lang" + ((isHost && !inProcess) ? " settings-button" : "")}
                                         onClick={() => !inProcess && this.handleToggleWordsMode()}>
                                         {this.state.mode.toUpperCase()}
                                     </span> :</span>
-                                    {this.state.mode !== "alias" ? (<span
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess && this.state.mode === "ru",
-                                            "level-selected": this.state.wordsLevel === 0 || this.state.mode !== "ru"
-                                        })}
-                                        onClick={() => this.state.mode === "ru" && !inProcess && this.handleToggleWords(0)}>
+                                        {this.state.mode !== "alias" ? (<span
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess && this.state.mode === "ru",
+                                                "level-selected": this.state.wordsLevel === 0 || this.state.mode !== "ru"
+                                            })}
+                                            onClick={() => this.state.mode === "ru" && !inProcess && this.handleToggleWords(0)}>
                                         Original
                                     </span>) : ""}
-                                    {this.state.mode === "ru" ? (<span
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": this.state.wordsLevel === 1
-                                        })}
-                                        onClick={() => !inProcess && this.handleToggleWords(1)}>
+                                        {this.state.mode === "ru" ? (<span
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess,
+                                                "level-selected": this.state.wordsLevel === 1
+                                            })}
+                                            onClick={() => !inProcess && this.handleToggleWords(1)}>
                                         Full
                                     </span>) : ""}
-                                    {this.state.mode === "alias" ? (<span
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": this.state.wordsLevel === 1
-                                        })}
-                                        onClick={() => !inProcess && this.handleToggleWords(1)}>
+                                        {this.state.mode === "alias" ? (<span
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess,
+                                                "level-selected": this.state.wordsLevel === 1
+                                            })}
+                                            onClick={() => !inProcess && this.handleToggleWords(1)}>
                                         Easy
                                     </span>) : ""}
-                                    {this.state.mode === "alias" ? (<span
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": this.state.wordsLevel === 2
-                                        })}
-                                        onClick={() => !inProcess && this.handleToggleWords(2)}>
+                                        {this.state.mode === "alias" ? (<span
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess,
+                                                "level-selected": this.state.wordsLevel === 2
+                                            })}
+                                            onClick={() => !inProcess && this.handleToggleWords(2)}>
                                         Normal
                                     </span>) : ""}
-                                    {this.state.mode === "alias" ? (<span
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": this.state.wordsLevel === 3
-                                        })}
-                                        onClick={() => !inProcess && this.handleToggleWords(3)}>
+                                        {this.state.mode === "alias" ? (<span
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess,
+                                                "level-selected": this.state.wordsLevel === 3
+                                            })}
+                                            onClick={() => !inProcess && this.handleToggleWords(3)}>
                                         Hard
                                     </span>) : ""}
-                                </div>
-                                {(this.customConfig || this.state.cardSet) ? (
-                                    <div>
-                                        <div className="little-controls custom-card-set upper">
-                                            <div className="card-set-goal">
-                                                <div className="colored-cards-icon" title="colored cards">
-                                                    {(this.customConfig ? !this.customConfig.triMode : !this.state.triMode)
-                                                        ? (<div className="colored-cards-icon duo">
-                                                            <i className="material-icons card-set-red">stop</i>
-                                                            <i className="material-icons card-set-blu">stop</i>
-                                                        </div>)
-                                                        : (<div className="colored-cards-icon trio">
-                                                            <i className="material-icons card-set-red">stop</i>
-                                                            <i className="material-icons card-set-blu">stop</i>
-                                                            <i className="material-icons card-set-grn">stop</i>
-                                                        </div>)}
-                                                </div>
+                                    </div>
+                                    {(this.customConfig || this.state.cardSet) ? (
+                                        <div>
+                                            <div className="little-controls custom-card-set upper">
+                                                <div className="card-set-goal">
+                                                    <div className="colored-cards-icon" title="colored cards">
+                                                        {(this.customConfig ? !this.customConfig.triMode : !this.state.triMode)
+                                                            ? (<div className="colored-cards-icon duo">
+                                                                <i className="material-icons card-set-red">stop</i>
+                                                                <i className="material-icons card-set-blu">stop</i>
+                                                            </div>)
+                                                            : (<div className="colored-cards-icon trio">
+                                                                <i className="material-icons card-set-red">stop</i>
+                                                                <i className="material-icons card-set-blu">stop</i>
+                                                                <i className="material-icons card-set-grn">stop</i>
+                                                            </div>)}
+                                                    </div>
 
-                                                {(isHost && !inProcess) ? (<input id="goal"
-                                                                                  type="number"
-                                                                                  min="1"
-                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet?.goal}</span>)}
+                                                    {(isHost && !inProcess) ? (<input id="goal"
+                                                                                      type="number"
+                                                                                      min="1"
+                                                                                      onChange={evt => this.handleChangeCardSet(evt)}
+                                                    />) : (<span className="value">{this.state.cardSet?.goal}</span>)}
+                                                </div>
+                                                <div className="card-set-black"><i title="black cards"
+                                                                                   className="material-icons">stop</i>
+                                                    {(isHost && !inProcess) ? (<input id="black"
+                                                                                      type="number"
+                                                                                      min="0"
+                                                                                      onChange={evt => this.handleChangeCardSet(evt)}
+                                                    />) : (<span className="value">{this.state.cardSet?.black}</span>)}
+                                                </div>
+                                                <div className="card-set-ext1"><i title="extra cards for 1st team"
+                                                                                  className="material-icons">looks_one</i>
+                                                    {(isHost && !inProcess) ? (<input id="ext1"
+                                                                                      type="number"
+                                                                                      min="0"
+                                                                                      onChange={evt => this.handleChangeCardSet(evt)}
+                                                    />) : (<span className="value">{this.state.cardSet?.ext1}</span>)}
+                                                </div>
+                                                <div
+                                                    className={cs("card-set-ext2", {disabled: this.customConfig ? !this.customConfig.triMode : !this.state.triMode})}>
+                                                    <i title="extra cards for 2nd team"
+                                                       className="material-icons">looks_two</i>
+                                                    {(isHost && !inProcess) ? (<input id="ext2"
+                                                                                      type="number"
+                                                                                      min="0"
+                                                                                      onChange={evt => this.handleChangeCardSet(evt)}
+                                                    />) : (<span className="value">{this.state.cardSet?.ext2}</span>)}
+                                                </div>
+                                                {(isHost && !inProcess && data.words.length > 0) ?
+                                                    (<i onClick={() => this.handleClickRestart()}
+                                                        className="material-icons start-game settings-button">sync</i>) : ""}
                                             </div>
-                                            <div className="card-set-black"><i title="black cards"
-                                                                               className="material-icons">stop</i>
-                                                {(isHost && !inProcess) ? (<input id="black"
-                                                                                  type="number"
-                                                                                  min="0"
-                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet?.black}</span>)}
-                                            </div>
-                                            <div className="card-set-ext1"><i title="extra cards for 1st team"
-                                                                              className="material-icons">looks_one</i>
-                                                {(isHost && !inProcess) ? (<input id="ext1"
-                                                                                  type="number"
-                                                                                  min="0"
-                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet?.ext1}</span>)}
-                                            </div>
-                                            <div
-                                                className={cs("card-set-ext2", {disabled: this.customConfig ? !this.customConfig.triMode : !this.state.triMode})}>
-                                                <i title="extra cards for 2nd team"
-                                                   className="material-icons">looks_two</i>
-                                                {(isHost && !inProcess) ? (<input id="ext2"
-                                                                                  type="number"
-                                                                                  min="0"
-                                                                                  onChange={evt => this.handleChangeCardSet(evt)}
-                                                />) : (<span className="value">{this.state.cardSet?.ext2}</span>)}
-                                            </div>
-                                            {(isHost && !inProcess && data.words.length > 0) ?
-                                                (<i onClick={() => this.handleClickRestart()}
-                                                    className="material-icons start-game settings-button">sync</i>) : ""}
-                                        </div>
-                                        <div className="little-controls custom-card-set">
+                                            <div className="little-controls custom-card-set">
                                             <span
                                                 className={cs({
                                                     "settings-button": isHost && !inProcess,
@@ -858,138 +861,138 @@ class Game extends React.Component {
                                                 onClick={() => !inProcess && this.handleSetBigMode(false)}>
                                             5 ✖ 5
                                             </span>
-                                            <span
-                                                className={cs({
-                                                    "settings-button": isHost && !inProcess,
-                                                    "level-selected": this.customConfig ? this.customConfig.bigMode : this.state.bigMode
-                                                })}
-                                                onClick={() => !inProcess && this.handleSetBigMode(true)}>
+                                                <span
+                                                    className={cs({
+                                                        "settings-button": isHost && !inProcess,
+                                                        "level-selected": this.customConfig ? this.customConfig.bigMode : this.state.bigMode
+                                                    })}
+                                                    onClick={() => !inProcess && this.handleSetBigMode(true)}>
                                             6 ✖ 6
                                             </span>
-                                            <span
-                                                className={cs({
-                                                    "settings-button": isHost && !inProcess,
-                                                    "level-selected": this.customConfig ? !this.customConfig.triMode : !this.state.triMode
-                                                })}
-                                                onClick={() => !inProcess && this.handleSetTriMode(false)}>
+                                                <span
+                                                    className={cs({
+                                                        "settings-button": isHost && !inProcess,
+                                                        "level-selected": this.customConfig ? !this.customConfig.triMode : !this.state.triMode
+                                                    })}
+                                                    onClick={() => !inProcess && this.handleSetTriMode(false)}>
                                             2 teams
                                             </span>
-                                            <span
-                                                className={cs({
-                                                    "settings-button": isHost && !inProcess,
-                                                    "level-selected": this.customConfig ? this.customConfig.triMode : this.state.triMode
-                                                })}
-                                                onClick={() => !inProcess && this.handleSetTriMode(true)}>
+                                                <span
+                                                    className={cs({
+                                                        "settings-button": isHost && !inProcess,
+                                                        "level-selected": this.customConfig ? this.customConfig.triMode : this.state.triMode
+                                                    })}
+                                                    onClick={() => !inProcess && this.handleSetTriMode(true)}>
                                             3 teams
                                             </span>
 
+                                            </div>
+                                        </div>
+                                    ) : ""}
+                                    <div className="start-game-buttons">
+                                        <div
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess,
+                                                "level-selected": !this.state.bigMode && !this.state.triMode && !this.state.cardSet
+                                            })}
+                                            onClick={() => !inProcess && this.handleClickStart("start-game")}><i
+                                            className="material-icons">alarm</i>Normal
+                                        </div>
+                                        <div
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess,
+                                                "level-selected": !this.state.cardSet && this.state.triMode
+                                            })}
+                                            onClick={() => !inProcess && this.handleClickStart("start-game-tri")}><i
+                                            className="material-icons">person_add</i>3 Teams
+                                        </div>
+                                        <div
+                                            className={cs({
+                                                "settings-button": isHost && !inProcess,
+                                                "level-selected": this.customConfig || this.state.cardSet
+                                            })}
+                                            onClick={() => !inProcess && this.handleToggleShowCustom()}><i
+                                            className="material-icons">settings_ethernet</i>Custom
                                         </div>
                                     </div>
-                                ) : ""}
-                                <div className="start-game-buttons">
-                                    <div
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": !this.state.bigMode && !this.state.triMode && !this.state.cardSet
-                                        })}
-                                        onClick={() => !inProcess && this.handleClickStart("start-game")}><i
-                                        className="material-icons">alarm</i>Normal
-                                    </div>
-                                    <div
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": !this.state.cardSet && this.state.triMode
-                                        })}
-                                        onClick={() => !inProcess && this.handleClickStart("start-game-tri")}><i
-                                        className="material-icons">person_add</i>3 Teams
-                                    </div>
-                                    <div
-                                        className={cs({
-                                            "settings-button": isHost && !inProcess,
-                                            "level-selected": this.customConfig || this.state.cardSet
-                                        })}
-                                        onClick={() => !inProcess && this.handleToggleShowCustom()}><i
-                                        className="material-icons">settings_ethernet</i>Custom
-                                    </div>
-                                </div>
-                            </>}
-                            bottomSection={<span
-                                className={cs("start-game-buttons", "traitor-button", {
-                                    "settings-button": isHost && !inProcess,
-                                    "level-selected": this.state.traitorMode
-                                })}
-                                onClick={() => !inProcess && this.toggleTraitorMode()}>
+                                </>}
+                                bottomSection={<span
+                                    className={cs("start-game-buttons", "traitor-button", {
+                                        "settings-button": isHost && !inProcess,
+                                        "level-selected": this.state.traitorMode
+                                    })}
+                                    onClick={() => !inProcess && this.toggleTraitorMode()}>
                                         <i className="material-icons">offline_bolt</i>Traitor mode
                                     </span>}
-                            inProcess={inProcess}
-                            emitEvent={(...args) => {
-                                this.socket.emit(...args)
-                            }}
-                            handleChangeParam={(field, value) => this.socket.emit("change-param", field, value)}
-                            sideButtons={<>
-                                {(isHost) ?
-                                    (<i onClick={() => this.handleClickShowCrowdMenu(true)}
-                                        className="material-icons start-game settings-button">{
-                                        data.crowdMode ? "people" : "people_outline"
-                                    }</i>) : ""}
-                                {(isHost && !inProcess && data.words.length > 0) ?
-                                    (<i onClick={() => this.handleClickRestart()}
-                                        className="material-icons start-game settings-button">sync</i>) : ""}
-                                {isHost ? (!inProcess
-                                    ? (<i onClick={() => this.handleClickTogglePause()}
-                                          className="material-icons start-game settings-button">play_arrow</i>)
-                                    : (<i onClick={() => this.handleClickTogglePause()}
-                                          className="material-icons start-game settings-button">pause</i>)) : ""}
-                                {isHost && !data.crowdMode ? (data.teamsLocked
-                                    ? (<i onClick={() => this.handleToggleTeamLockClick()}
-                                          className="material-icons start-game settings-button">lock_outline</i>)
-                                    : (<i onClick={() => this.handleToggleTeamLockClick()}
-                                          className="material-icons start-game settings-button">lock_open</i>)) : ""}
-                            </>}
-                        />
-                        <CommonRoom state={this.state} app={this}/>
-                        {this.state.showCrowdMenu ? <div className="crowd-menu-wrapper">
-                            <div className="crowd-menu panel">
-                                <div className="crowd-menu-title">
-                                    Режим игры со зрителями
-                                    <span className="crowd-menu-close">
+                                inProcess={inProcess}
+                                emitEvent={(...args) => {
+                                    this.socket.emit(...args)
+                                }}
+                                handleChangeParam={(field, value) => this.socket.emit("change-param", field, value)}
+                                sideButtons={<>
+                                    {(isHost) ?
+                                        (<i onClick={() => this.handleClickShowCrowdMenu(true)}
+                                            className="material-icons start-game settings-button">{
+                                            data.crowdMode ? "people" : "people_outline"
+                                        }</i>) : ""}
+                                    {(isHost && !inProcess && data.words.length > 0) ?
+                                        (<i onClick={() => this.handleClickRestart()}
+                                            className="material-icons start-game settings-button">sync</i>) : ""}
+                                    {isHost ? (!inProcess
+                                        ? (<i onClick={() => this.handleClickTogglePause()}
+                                              className="material-icons start-game settings-button">play_arrow</i>)
+                                        : (<i onClick={() => this.handleClickTogglePause()}
+                                              className="material-icons start-game settings-button">pause</i>)) : ""}
+                                    {isHost && !data.crowdMode ? (data.teamsLocked
+                                        ? (<i onClick={() => this.handleToggleTeamLockClick()}
+                                              className="material-icons start-game settings-button">lock_outline</i>)
+                                        : (<i onClick={() => this.handleToggleTeamLockClick()}
+                                              className="material-icons start-game settings-button">lock_open</i>)) : ""}
+                                </>}
+                            />
+                            <CommonRoom state={this.state} app={this}/>
+                            {this.state.showCrowdMenu ? <div className="crowd-menu-wrapper">
+                                <div className="crowd-menu panel">
+                                    <div className="crowd-menu-title">
+                                        Режим игры со зрителями
+                                        <span className="crowd-menu-close">
                                         <i onClick={() => this.handleClickShowCrowdMenu(false)}
                                            className="material-icons">close</i>
                                     </span>
-                                </div>
-                                <p>
-                                    Подходит для игр на стримах.
-                                    Играющие делятся на ведущих и зрителей.
-                                    В этом режиме только ведущие могут загадывать шифр,
-                                    который зрителям необходимо найти на поле.
-                                    Никнеймы зрителей в данном режиме не отображаются.
-                                </p>
-                                Ссылка для зрителей (отображается в адресной строке):
-                                <div className="crowd-link">
-                                    {this.state.masterPlayersLink
-                                        ? <a href={`${pageLink}?crowd=1`}>{`${pageLink}?crowd=1`}</a>
+                                    </div>
+                                    <p>
+                                        Подходит для игр на стримах.
+                                        Играющие делятся на ведущих и зрителей.
+                                        В этом режиме только ведущие могут загадывать шифр,
+                                        который зрителям необходимо найти на поле.
+                                        Никнеймы зрителей в данном режиме не отображаются.
+                                    </p>
+                                    Ссылка для зрителей (отображается в адресной строке):
+                                    <div className="crowd-link">
+                                        {this.state.masterPlayersLink
+                                            ? <a href={`${pageLink}?crowd=1`}>{`${pageLink}?crowd=1`}</a>
+                                            : "Режим ещё не активен"}</div>
+                                    Ссылка для ведущих (не показывайте её зрителям):
+                                    <div className="crowd-link">{this.state.masterPlayersLink
+                                        ?
+                                        <a href={`${pageLink}?masterKey=${this.state.masterPlayersLink}`}>{`${pageLink}?masterKey=${this.state.masterPlayersLink}`}</a>
                                         : "Режим ещё не активен"}</div>
-                                Ссылка для ведущих (не показывайте её зрителям):
-                                <div className="crowd-link">{this.state.masterPlayersLink
-                                    ?
-                                    <a href={`${pageLink}?masterKey=${this.state.masterPlayersLink}`}>{`${pageLink}?masterKey=${this.state.masterPlayersLink}`}</a>
-                                    : "Режим ещё не активен"}</div>
-                                Будучи активированным, режим больше не отключается.
-                                <br/>
-                                Нажав <i className="crowd-icon material-icons">people_outline</i>, вы снова сможете
-                                увидеть это окно
-                                <br/><br/>
-                                <div className={cs("crowd-menu-button panel-accent", {
-                                    disabled: this.state.crowdMode
-                                })} onClick={() => this.handleClickEnableCrowdMode()}>
-                                    {!this.state.crowdMode ? "Активировать" : "Активирован"}
+                                    Будучи активированным, режим больше не отключается.
+                                    <br/>
+                                    Нажав <i className="crowd-icon material-icons">people_outline</i>, вы снова сможете
+                                    увидеть это окно
+                                    <br/><br/>
+                                    <div className={cs("crowd-menu-button panel-accent", {
+                                        disabled: this.state.crowdMode
+                                    })} onClick={() => this.handleClickEnableCrowdMode()}>
+                                        {!this.state.crowdMode ? "Активировать" : "Активирован"}
+                                    </div>
                                 </div>
-                            </div>
-                        </div> : ""}
+                            </div> : ""}
+                        </div>
                     </div>
-                </div>
-            );
-        } else return (<div/>);
+                );
+            } else return (<div/>);
     }
 }
 
