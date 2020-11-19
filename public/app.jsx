@@ -548,11 +548,13 @@ class Game extends React.Component {
     }
 
     handleChangeCardSet(evt) {
-        if (!isNaN(evt.target.valueAsNumber))
-            this.customConfig.cardSet[evt.target.id] = evt.target.valueAsNumber;
-        else
-            evt.target.value = this.customConfig.cardSet[evt.target.id];
-        this.setCardSetConstraints();
+        if (this.customConfig) {
+            if (!isNaN(evt.target.valueAsNumber))
+                this.customConfig.cardSet[evt.target.id] = evt.target.valueAsNumber;
+            else
+                evt.target.value = this.customConfig.cardSet[evt.target.id];
+            this.setCardSetConstraints();
+        }
     }
 
     setCardSetConstraints() {
