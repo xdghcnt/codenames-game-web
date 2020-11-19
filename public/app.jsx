@@ -427,8 +427,10 @@ class Game extends React.Component {
             setTimeout(() => {
                 if (!this.wasReleased) {
                     const wordNode = document.querySelector(`[data-wordIndex='${index}']`);
-                    wordNode.querySelector("img").src = `/codenames/picturesBig/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
-                    wordNode.classList.add("zoomed");
+                    if (wordNode) {
+                        wordNode.querySelector("img").src = `/codenames/picturesBig/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
+                        wordNode.classList.add("zoomed");
+                    }
                 }
             }, 250);
         }
@@ -588,9 +590,11 @@ class Game extends React.Component {
     }
 
     handleSetBigMode(state) {
-        this.customConfig.bigMode = state;
-        this.customConfig.cardSet = this.getDefaultCardSet();
-        this.configureCardSetInputs();
+        if (this.customConfig) {
+            this.customConfig.bigMode = state;
+            this.customConfig.cardSet = this.getDefaultCardSet();
+            this.configureCardSetInputs();
+        }
     }
 
     handleSetTriMode(state) {
