@@ -427,7 +427,7 @@ class Game extends React.Component {
             setTimeout(() => {
                 if (!this.wasReleased) {
                     const wordNode = document.querySelector(`[data-wordIndex='${index}']`);
-                    if (wordNode) {
+                    if (wordNode && wordNode.querySelector("img")) {
                         wordNode.querySelector("img").src = `/codenames/picturesBig/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
                         wordNode.classList.add("zoomed");
                     }
@@ -440,7 +440,7 @@ class Game extends React.Component {
         if (this.state.modeStarted === "pic") {
             this.wasReleased = true;
             const wordNode = document.querySelector(".zoomed");
-            if (wordNode) {
+            if (wordNode && wordNode.querySelector("img")) {
                 wordNode.querySelector("img").src = `/codenames/pictures/pic${this.state.words[wordNode.getAttribute("data-wordIndex")]}.png`;
                 document.querySelector(".zoomed").classList.remove("zoomed");
             }
