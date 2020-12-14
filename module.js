@@ -31,7 +31,7 @@ function init(wsServer, path) {
             super(hostId, hostData, userRegistry);
             const
                 room = {
-                    roomId: hostData.roomId,
+                    ...this.room,
                     inited: true,
                     hostId: hostId,
                     spectators: new JSONSet(),

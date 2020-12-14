@@ -314,7 +314,11 @@ class Game extends React.Component {
                 this.setCustomConfig();
             else if (this.state && this.state.paused && state.cardSet && !state.paused)
                 this.customConfig = false;
-            CommonRoom.processCommonRoom(state, this.state);
+            CommonRoom.processCommonRoom(state, this.state, {
+                maxPlayers: "∞",
+                largeImageKey: "codenames",
+                details: "Codenames"
+            });
             this.setState(Object.assign({
                     userId: this.userId,
                     masterKey: this.state.masterKey,
