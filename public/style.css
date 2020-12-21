@@ -1275,3 +1275,21 @@ a, text-color {
 .crowd-self {
     font-style: italic;
 }
+
+
+@media (max-width: 840px) {
+    .updates-container {
+        position: fixed;
+        width: 100%;
+        max-height: calc(100% - 107px);
+    }
+    .updates-container-tab {
+        left: 170px;
+    }
+}
+
+@media (max-width: 840px) {
+    .updates-container-close.panel {
+        right: auto;
+    }
+}
