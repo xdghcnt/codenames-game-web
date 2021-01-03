@@ -370,8 +370,8 @@ class Game extends React.Component {
                         volL = 1 - volR;
                     this.tapSoundL.volume = Math.max(volL, 0.2) * 0.3;
                     this.tapSoundR.volume = Math.max(volR, 0.2) * 0.3;
-                    this.playSound(this.tapSoundL);
-                    this.playSound(this.tapSoundR);
+                    this.playSound(this.tapSoundL, true);
+                    this.playSound(this.tapSoundR, true);
                 }
                 wordNode.classList.add("highlight-anim");
                 setTimeout(() => wordNode && wordNode.classList.remove("highlight-anim"), 0);
@@ -403,8 +403,8 @@ class Game extends React.Component {
         window.hyphenateEn = createHyphenator(hyphenationPatternsEnUs);
     }
 
-    playSound(elem) {
-        HostControls.playSound(elem);
+    playSound(elem, interactiveVolume) {
+        HostControls.playSound(elem, interactiveVolume);
     }
 
     debouncedEmit(event, data) {
